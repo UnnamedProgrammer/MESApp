@@ -1,6 +1,6 @@
 **/.vscode
 **/.git
-**/MESMobileServer/logs/*.txt
+*.log
 **/MESMobileServer/.idea
 **/MES/.buildozer
 **/MES/.idea

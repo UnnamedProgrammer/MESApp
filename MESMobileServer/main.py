@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 
 fdir = dir = os.path.dirname(__file__) + "\\logs\\"
-filename = r'Log_at_'+datetime.strftime(datetime.now(),'%Y-%m-%d %H-%M-%S')+'.txt'
+filename = r'Log_at_'+datetime.strftime(datetime.now(),'%Y-%m-%d %H-%M-%S')+'.log'
 os.path.join(fdir,filename)
 open(fdir+filename, 'w',encoding="utf-8").close()
 
