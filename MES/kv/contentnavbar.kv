@@ -1,0 +1,33 @@
+<ContentNavigationDrawer>:
+    MDBoxLayout:
+        size_hint_y: None
+        adaptive_height: True
+        padding: dp(15),dp(30),dp(0),dp(0)
+        Image:
+            size_hint: None, None
+            size: "64dp", "64dp"
+            source: "icons/avatar.png"
+        MDLabel:
+            padding: dp(15), dp(0)
+            text: 'ermolaev.v'
+            pos_hint: {'center_x': 0.5, 'center_y': .35}
+            font_style: "H6"
+    MDBoxLayout:
+        orientation: 'vertical'
+        size_hint_y: None
+        adaptive_height: True
+        padding: dp(0),dp(20),dp(0),dp(0)
+        OneLineIconListItem:
+            text: "На главную"
+            on_press: if app.connected == True: app.ReturnToMain2()
+            IconLeftWidget:
+                icon: "arrow-collapse-left"                    
+        OneLineIconListItem:
+            text: "Учетная запись *(В разработке)"
+            IconLeftWidget:
+                icon: "account-box-outline"
+        OneLineIconListItem:
+            text: "Настройки *(В разработке)"
+            IconLeftWidget:
+                icon: "book-settings-outline"    
+    MDBoxLayout:    

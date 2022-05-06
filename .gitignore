@@ -1,0 +1,10 @@
+**/.vscode
+**/.git
+**/MESMobileServer/logs/*.txt
+**/MESMobileServer/.idea
+**/MES/.buildozer
+**/MES/.idea
+**/MES/bin
+**/MES/buildozer.spec
+__pycache__/
+*.pyc

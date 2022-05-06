@@ -1,0 +1,274 @@
+#:include force kv/contentnavbar.kv
+
+<MainScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+        MDToolbar:
+            id: toolbar
+            title: "Информация по ТПА"
+            left_action_items: [["menu", lambda x: app.NavDrawTrigger()]]
+            specific_text_color: (0, 0, 0,1)
+            md_bg_color: (1, 1, 1, 1)
+            padding: dp(5),dp(0),dp(5),dp(0)
+            elevation: 10
+            height: dp(80)
+        MESScreenManager:
+            id: manager
+            LoadingWindow:
+                MDSpinner:
+                    id: load_spin
+                    size_hint: None, None
+                    size: dp(46), dp(46)
+                    active: False
+                    pos_hint: {'center_x': 0.5, 'center_y': .5}
+                MDLabel:
+                    id: load_status_hint
+                    size_hint: None, None
+                    size: dp(300), dp(0)
+                    pos_hint: {'center_x': 0.5, 'center_y': .35}
+                    halign: 'center'
+            MainWindow:
+                md_bg_color: (1,1,1,1)
+                RV:
+                    id: container
+                    viewclass: 'TpaCard'
+                    effect_cls: 'ScrollEffect'
+                    RecycleBoxLayout:
+                        id: tpa_list
+                        orientation: 'vertical'
+                        default_size: None, dp(180)
+                        default_size_hint: 1, None
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: dp(5),dp(5),dp(5),dp(5)
+                        spacing: 5
+
+            SecondWindow:
+                md_bg_color: app.get_color("#f8f8f8")
+                ScrollView:
+                    do_scroll_y: True
+                    GridLayout:
+                        cols: 1
+                        padding: dp(5),dp(5),dp(5),dp(5)
+                        size_hint_y: None
+                        height: dp(1600)
+                        spacing: 10
+                        MDCard:
+                            size_hint_y: None
+                            height: dp(750)
+                            MDBoxLayout:
+                                orientation: "vertical"
+                                spacing: 5
+                                DetailGraph:
+                                    id: detailgraph
+                                MDBoxLayout:
+                                    id: butbox
+                                    orientation: "vertical"
+                                    size_hint_y: None
+                                    size_hint_x: None
+                                    width: 250
+                                    pos_hint: {'center_x': .5, 'center_y': .5}
+                                    spacing: 5
+                                    MDRaisedButton:
+                                        id: pred_sm
+                                        text: "Предыдущая смена"
+                                        theme_text_color: "Custom"
+                                        text_color: 0, 0, 0, 1
+                                        pos_hint: {'center_x': .5, 'center_y': .5}
+                                        md_bg_color: app.get_color("#3c89ec")
+                                        on_release: app.SendQueryForGraphHistory()
+                                    MDRaisedButton:
+                                        id:escape
+                                        text: "Текущая смена"
+                                        pos_hint: {'center_x': .5, 'center_y': .5}
+                                        theme_text_color: "Custom"
+                                        on_release: app.GetEscapeGraph()
+
+                                MDFlatButton:
+                                    id: date_pick
+                                    theme_text_color: "Custom"
+                                    text_color: 0, 0, 1, 1
+                                    text: "Дата"
+                                    theme_text_color: "Custom"
+                                    pos_hint: {'center_x': .5, 'center_y': .5}
+                                    text_color: 0, 0, 0, 1
+                                    md_bg_color: app.get_color("#3c89ec")
+                                    on_release: app.show_date_picker()
+                        MDCard
+                            id: stats_card
+                            size_hint_y: None
+                            height: dp(650)
+                            MDBoxLayout:
+                                orientation: "vertical"
+                                MDBoxLayout:
+                                    padding: dp(14),dp(0),dp(14),dp(14)
+                                    orientation: "vertical"
+                                    MDBoxLayout:         
+                                        padding: dp(0),dp(0),dp(0),dp(5)
+                                        MDLabel:                                           
+                                            text: "План по продукту: "
+                                            size_hint: None, None
+                                            width: dp(200)
+                                            height: dp(30)
+                                        MDChip:
+                                            id: plan
+                                            text: '250'
+                                            icon: ''
+                                            color: app.get_color("#007bff")
+                                            text_color: 1, 1, 1, 1
+                                    MDSeparator:
+                                    MDBoxLayout:   
+                                        padding: dp(0),dp(0),dp(0),dp(5)     
+                                        MDLabel:
+                                            text: "Выпущено продукта: "
+                                            size_hint: None, None
+                                            width: dp(200)
+                                            height: dp(30)
+                                        MDChip:
+                                            id: fact
+                                            text: '120'
+                                            icon: ''
+                                            color: app.get_color("#28a745")
+                                            text_color: 1, 1, 1, 1
+                                    MDSeparator:
+                                    MDBoxLayout:    
+                                        padding: dp(0),dp(0),dp(0),dp(5)    
+                                        MDLabel:
+                                            text: "Отклонение: "
+                                            size_hint: None, None
+                                            width: dp(200)
+                                            height: dp(30)
+                                        MDChip:
+                                            id: diffprod
+                                            text: '10'
+                                            icon: ''
+                                            color: app.changeDetailColor(self.text)
+                                            text_color: 1, 1, 1, 1
+                                    MDSeparator:                                    
+                                    MDBoxLayout:     
+                                        padding: dp(0),dp(0),dp(0),dp(5)    
+                                        MDLabel:
+                                            text: "Плановый цикл: "
+                                            size_hint: None, None
+                                            width: dp(200)
+                                            height: dp(30)
+                                        MDChip:
+                                            id: cyclenorm
+                                            text: '125'
+                                            icon: ''
+                                            color: app.get_color("#007bff")
+                                            text_color: 1, 1, 1, 1 
+                                    MDSeparator:   
+                                    MDBoxLayout:     
+                                        padding: dp(0),dp(0),dp(0),dp(5)   
+                                        MDLabel:
+                                            text: "Средний цикл за смену: "
+                                            size_hint: None, None
+                                            width: dp(200)
+                                            height: dp(30)
+                                        MDChip:
+                                            id: averagecycle
+                                            text: '50'
+                                            icon: ''
+                                            color: app.get_color("#28a745")
+                                            text_color: 1, 1, 1, 1 
+                                    MDSeparator: 
+                                    MDBoxLayout:
+                                        padding: dp(0),dp(0),dp(0),dp(5)         
+                                        MDLabel:
+                                            text: "Плановый вес: "
+                                            size_hint: None, None
+                                            width: dp(200)
+                                            height: dp(30)
+                                        MDChip:
+                                            id: weightnorm
+                                            text: '16.7'
+                                            icon: ''
+                                            color: app.get_color("#007bff")
+                                            text_color: 1, 1, 1, 1
+                                    MDSeparator:  
+                                    MDBoxLayout:   
+                                        padding: dp(0),dp(0),dp(0),dp(5)      
+                                        MDLabel:
+                                            text: "Средний вес: "
+                                            size_hint: None, None
+                                            width: dp(200)
+                                            height: dp(30)
+                                        MDChip:
+                                            text: '0'
+                                            icon: ''
+                                            color: app.get_color("#28a745")
+                                            text_color: 1, 1, 1, 1  
+                                    MDSeparator:
+                                    MDBoxLayout:   
+                                        padding: dp(0),dp(0),dp(0),dp(5)     
+                                        MDLabel:
+                                            text: "До конца плана: "
+                                            size_hint: None, None
+                                            width: dp(185)
+                                            height: dp(30)
+                                        MDChip:
+                                            id: endtime
+                                            text: ""
+                                            icon: ''
+                                            color: app.get_color("#17a2b8")
+                                            text_color: 1, 1, 1, 1  
+                                    MDSeparator:
+                        MDCard:
+                            size_hint_y: None
+                            height: dp(180)
+                            MDBoxLayout:
+                                padding: dp(14),dp(14),dp(14),dp(14)
+                                orientation: "vertical"
+                                OneLineListItem:
+                                    id: enteredweight
+                                    text: "Введенный вес: 0"
+                                    bg_color: app.get_color("#558afb")
+                                    theme_text_color: "Custom"
+                                    text_color: 1,1,1,1
+                                    on_release: app.change_window("EnteredWeightWindow") 
+                                OneLineListItem:
+                                    id: idlecount
+                                    text: "Простои: 0"
+                                    bg_color: app.get_color("#ec4750")
+                                    ext_color: 0,0,0,1
+                                    theme_text_color: "Custom"
+                                    text_color: 1,1,1,1     
+                                    on_release: app.change_window("idleWindow")                               
+                                OneLineListItem:
+                                    text: "Распоряжения: 0"
+                                    bg_color: app.get_color("fbd255")  
+                                    ext_color: 0,0,0,1  
+            IdleWindow:
+                id: idlelist 
+
+            EnteredWeightWindow:
+                id: enteredweightlist
+
+    MDNavigationDrawer:
+        id: nav_drawer
+        orientation: 'vertical'
+        ContentNavigationDrawer:      
+
+<TpaCard>:
+    id: card
+    orientation: "vertical"
+    padding: dp(5),dp(5),dp(0),dp(5)
+    ripple_behavior: True
+    MDBoxLayout:
+        orientation: 'vertical'
+        spacing: dp(10)
+        padding: dp(15),dp(0),dp(15),dp(0)
+        OneLineIconListItem:
+            text: root.name
+            on_press: app.SelectDetailScreen(root.name,root.productsPlan,root.products,root.cyclenorm,root.averagecycle,root.weightnorm)
+            IconLeftWidget:
+                icon: "asterisk"
+        MDLabel:
+            text:"ПФ: " + root.installedPf + "\n" + "Техсостояние EAM: " + root.techstateEam + "\n" +"Техсостояние MES: " + root.techstateTerminal + "\n" +"План: " + root.productsPlan + "\n" +"Продукт за смену: " + root.products
+            adaptive_height: True
+            line_height: 1.2
+            markup: True
+
+
+
