@@ -427,40 +427,88 @@ class DataManipulator():
         try:
             editresult = {'TpaIdleList': {},'EnteredWeight': {},'ShiftTask': {}}
             nightshift = False
+            if(isinstance(date,str)):
+                checkdate = datetime.strptime(date,"%Y-%m-%d %H:%M:%S")
+            else: 
+                checkdate = date
             if(date != None):
-                nightshift = False
                 # Проверка на времени смены (дневная, ночная)
-                if (date.hour >= 7 and date.hour < 19):
+                if (checkdate.hour >= 7 and checkdate.hour < 19):
+                    date = checkdate.strftime("%Y-%m-%d %H:%M:%S")
                     nightshift = False
                 else:
                     nightshift = True
             else:
+                # Проверка на времени смены (дневная, ночная)
                 if (datetime.now().hour >= 7 and datetime.now().hour < 19):
-                    date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     nightshift = False
+                    date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 else:
                     nightshift = True
             
-            query = f''' 
-                SELECT [MESIdleJournal].[Oid]
-                    ,[MESIdleJournal].[RepairObject]
-                    ,[MESIdleJournal].[StartDate]
-                    ,[MESIdleJournal].[EndDate]
-                    ,[Asset]
-                FROM [EAM_test].[dbo].[MESIdleJournal],
-                    [EAM_test].[dbo].[RFIDReader]
-                WHERE 
-                    DATENAME(HOUR, [MESIdleJournal].[StartDate]) >= 7 AND 
-                    DATENAME(HOUR, [MESIdleJournal].[StartDate]) <= 19 AND 
-                    DATENAME(YEAR, [MESIdleJournal].[StartDate]) = DATENAME(YEAR, GETDATE()) AND
-                    DATENAME(MONTH, [MESIdleJournal].[StartDate]) = DATENAME(MONTH, GETDATE()) AND
-                    DATENAME(DAY, [MESIdleJournal].[StartDate]) = DATENAME(DAY, GETDATE()) AND	
-                    [RFIDReader].Oid = '{repobj}' AND
-                    [MESIdleJournal].[RepairObject] = Asset
-                ORDER BY [MESIdleJournal].StartDate DESC
-            '''
-            self.Connections['EAM_test'].execute(query)
-            result = self.Connections['EAM_test'].fetchall()
+            if(nightshift == False):
+                query = f''' 
+                    SELECT [MESIdleJournal].[Oid]
+                        ,[MESIdleJournal].[RepairObject]
+                        ,[MESIdleJournal].[StartDate]
+                        ,[MESIdleJournal].[EndDate]
+                        ,[Asset]
+                    FROM [EAM_test].[dbo].[MESIdleJournal],
+                        [EAM_test].[dbo].[RFIDReader]
+                    WHERE 
+                        DATENAME(HOUR, [MESIdleJournal].[StartDate]) >= 7 AND 
+                        DATENAME(HOUR, [MESIdleJournal].[StartDate]) <= 19 AND 
+                        DATENAME(YEAR, [MESIdleJournal].[StartDate]) = DATENAME(YEAR, '{date}') AND
+                        DATENAME(MONTH, [MESIdleJournal].[StartDate]) = DATENAME(MONTH, '{date}') AND
+                        DATENAME(DAY, [MESIdleJournal].[StartDate]) = DATENAME(DAY, '{date}') AND	
+                        [RFIDReader].Oid = '{repobj}' AND
+                        [MESIdleJournal].[RepairObject] = Asset
+                    ORDER BY [MESIdleJournal].StartDate DESC
+                '''
+                self.Connections['EAM_test'].execute(query)
+                result = self.Connections['EAM_test'].fetchall()
+            else:
+                query = f'''SELECT [MESIdleJournal].[Oid]
+                        ,[MESIdleJournal].[RepairObject]
+                        ,[MESIdleJournal].[StartDate]
+                        ,[MESIdleJournal].[EndDate]
+                        ,[Asset]
+                    FROM [EAM_test].[dbo].[MESIdleJournal],
+                        [EAM_test].[dbo].[RFIDReader]
+                    WHERE 
+                        DATENAME(HOUR, [MESIdleJournal].[StartDate]) >= 19 AND 
+                        DATENAME(HOUR, [MESIdleJournal].[StartDate]) <= 23 AND 
+                        DATENAME(YEAR, [MESIdleJournal].[StartDate]) = DATENAME(YEAR, '{date}') AND
+                        DATENAME(MONTH, [MESIdleJournal].[StartDate]) = DATENAME(MONTH, '{date}') AND
+                        DATENAME(DAY, [MESIdleJournal].[StartDate]) = DATENAME(DAY, '{date}') AND	
+                        [RFIDReader].Oid = '{repobj}' AND
+                        [MESIdleJournal].[RepairObject] = Asset
+                    ORDER BY [MESIdleJournal].StartDate DESC
+                '''
+                self.Connections['EAM_test'].execute(query)
+                result1 = self.Connections['EAM_test'].fetchall()
+
+                query = f'''SELECT [MESIdleJournal].[Oid]
+                        ,[MESIdleJournal].[RepairObject]
+                        ,[MESIdleJournal].[StartDate]
+                        ,[MESIdleJournal].[EndDate]
+                        ,[Asset]
+                    FROM [EAM_test].[dbo].[MESIdleJournal],
+                        [EAM_test].[dbo].[RFIDReader]
+                    WHERE 
+                        DATENAME(HOUR, [MESIdleJournal].[StartDate]) >= 0 AND 
+                        DATENAME(HOUR, [MESIdleJournal].[StartDate]) <= 7 AND 
+                        DATENAME(YEAR, [MESIdleJournal].[StartDate]) = DATENAME(YEAR, '{date}') AND
+                        DATENAME(MONTH, [MESIdleJournal].[StartDate]) = DATENAME(MONTH, '{date}') AND
+                        DATENAME(DAY, [MESIdleJournal].[StartDate]) = DATENAME(DAY, '{date}') AND	
+                        [RFIDReader].Oid = '{repobj}' AND
+                        [MESIdleJournal].[RepairObject] = Asset
+                    ORDER BY [MESIdleJournal].StartDate DESC
+                '''
+                self.Connections['EAM_test'].execute(query)
+                result2 = self.Connections['EAM_test'].fetchall()
+                result = result1 + result2
+
             if (len(result) > 0):
                 for idle in result:
                     editresult['TpaIdleList'][idle[0]] = {
@@ -507,64 +555,48 @@ class DataManipulator():
         logging.info("SQLManipulator -> GetTpaWeight")
         # Проверка на времени смены (дневная, ночная)
         result = None
-        nightshift = False
         if(isinstance(date,str)):
             checkdate = datetime.strptime(date,"%Y-%m-%d %H:%M:%S")
         else: 
             checkdate = date
-        if(date != None):
-            nightshift = False
-            # Проверка на времени смены (дневная, ночная)
-            if (checkdate.hour >= 7 and checkdate.hour < 19):
-                nightshift = False
-            else:
-                nightshift = True
-        else:
-            nightshift = False
-            # Проверка на времени смены (дневная, ночная)
-            if (datetime.now().hour >= 7 and datetime.now().hour < 19):
-                date = datetime.now().strftime("%Y-%m-%d")
-                nightshift = False
-            else:
-                nightshift = True
-        
-        if(nightshift == False):
-            query = f''' 
-                        DECLARE @now datetime,  @morning datetime, @taskdate datetime, @night datetime, @shifttype int ;
-                                                            
-                        SET @now = GETDATE();
-                        SET @morning = DATEADD( hour, 7, DATEDIFF( dd, 0, @now ) );
-                        SET @night = DATEADD( hour, 19, DATEDIFF( dd, 0, @now ) );
-                                                            
-                        IF @now >= @morning AND @now < @night
-                            SET @shifttype = 0;
-                        ELSE 
-                            SET @shifttype = 1;
-                                                            
-                        IF @now >= @morning
-                            SET @taskdate = CAST( @now AS date );
-                        ELSE 
-                            SET @taskdate = DATEADD(DAY, -1, CAST( @now AS date ));
+        date = checkdate.strftime("%Y-%m-%d %H:%M:%S")
+        query = f''' 
+                DECLARE @now datetime,  @morning datetime, @taskdate datetime, @night datetime, @shifttype int ;
                                                                         
-                        SELECT  
-                            MSW.[Weight],
-                            MSW.[CreateDate],
-                            EMPLE.Наименование,
-                            RDOID.Oid
-                        FROM [EAM_test].[dbo].[MESShiftTask] AS ST
-                        LEFT JOIN [EAM_test].[dbo].[MESShiftTaskData] AS STD ON STD.[ShiftTask] = ST.[Oid]
-                        LEFT JOIN [EAM_Iplast].[dbo].[ОбъектРемонта]  AS [OBR] ON STD.[RepairObject] = OBR.[Oid]
-                        LEFT JOIN [EAM_test].[dbo].[MESShiftWeight] AS MSW ON MSW.ShiftTaskData = STD.Oid
-                        LEFT JOIN [EAM_test].[dbo].[БазовыйРесурс] AS EMPLE ON EMPLE.[Oid] = MSW.Creator
-                        LEFT JOIN [EAM_test].[dbo].[RFIDReader] AS RDOID ON RDOID.Asset = RepairObject
-                        WHERE ST.[TaskDate] = @taskdate 
-                        AND ST.[ShiftType] = @shifttype
-                        AND STD.[TaskStatus] IS NOT NULL
-                        AND RDOID.Active = 1
-                        AND RDOID.Oid = '{repobj}'
-            '''
-            self.Connections['EAM_test'].execute(query)
-            result = self.Connections['EAM_test'].fetchall()
+                SET @now = CONVERT(datetime2,'{date}');
+                SET @morning = DATEADD( hour, 7, DATEDIFF( dd, 0, @now ) );
+                SET @night = DATEADD( hour, 19, DATEDIFF( dd, 0, @now ) );
+                                                                        
+                IF @now >= @morning AND @now < @night
+                    SET @shifttype = 0;
+                ELSE 
+                    SET @shifttype = 1;
+                                                                        
+                IF @now >= @morning
+                    SET @taskdate = CAST( @now AS date );
+                ELSE 
+                    SET @taskdate = DATEADD(DAY, -1, CAST( @now AS date ));
+                                                                                    
+                SELECT  
+                    MSW.[Weight],
+                    MSW.[CreateDate],
+                    EMPLE.Наименование,
+                    RDOID.Oid
+                FROM [EAM_test].[dbo].[MESShiftTask] AS ST
+                LEFT JOIN [EAM_test].[dbo].[MESShiftTaskData] AS STD ON STD.[ShiftTask] = ST.[Oid]
+                LEFT JOIN [EAM_Iplast].[dbo].[ОбъектРемонта]  AS [OBR] ON STD.[RepairObject] = OBR.[Oid]
+                LEFT JOIN [EAM_test].[dbo].[MESShiftWeight] AS MSW ON MSW.ShiftTaskData = STD.Oid
+                LEFT JOIN [EAM_test].[dbo].[БазовыйРесурс] AS EMPLE ON EMPLE.[Oid] = MSW.Creator
+                LEFT JOIN [EAM_test].[dbo].[RFIDReader] AS RDOID ON RDOID.Asset = RepairObject
+                WHERE ST.[TaskDate] = @taskdate 
+                AND ST.[ShiftType] = @shifttype
+                AND STD.[TaskStatus] IS NOT NULL
+                AND RDOID.Active = 1
+                AND RDOID.Oid = '{repobj}'
+                ORDER BY CreateDate DESC
+                '''
+        self.Connections['EAM_test'].execute(query)
+        result = self.Connections['EAM_test'].fetchall()
         return result
     
     def ShiftTask(self,repobj,date: datetime):

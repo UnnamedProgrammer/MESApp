@@ -70,6 +70,8 @@ class MES(MDApp):
         log.info("Построение макета приложения")
         self.theme_cls.theme_style = "Light"
         self.theme_cls.primary_palette = "BlueGray"
+        # Задаём расписание запрашивая обновление списка ТПА каждые 120 сек
+        Clock.schedule_interval(self.SendUpdateTpaCards, 120)
         return self.Screen
 
     def on_exit(self):
@@ -85,7 +87,7 @@ class MES(MDApp):
             try:
                 self.root.ids.toolbar.title = "Ожидание сервера..."
                 if(self.connected == False):
-                    log.info("Подключение к серверу "+str(self.serverhost) + ":" +str(self.serverport))
+                    log.info("Подключение к серверу: "+str(self.serverhost) + ":" +str(self.serverport))
                     self.root.ids.load_spin.active = True
                     self.root.ids.load_status_hint.text = 'Подключение...'
                     self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -118,8 +120,6 @@ class MES(MDApp):
             self.root.ids.load_status_hint.text = 'Подключение неудачно, нет ответа от сервера.'
         else:
             #======================Обработка подключения===========================
-            # Задаём расписание запрашивая обновление списка ТПА каждые 120 сек
-            Clock.schedule_interval(self.SendUpdateTpaCards, 120)
             # Получаем данные от сервера
             self.root.ids.load_spin.active = True
             self.root.ids.load_status_hint.text = 'Получение данных с сервера...'
@@ -129,7 +129,7 @@ class MES(MDApp):
                     log.info("Отключение от сервера")
                     self.change_window('LoadingWindow')
                     self.root.ids.load_spin.active = False
-                    self.root.ids.load_status_hint.text = "Ошибка подключения к серверу"
+                    self.root.ids.load_status_hint.text = "Сервер выключен"
                     time.sleep(3)
                     self.connection_attempt = 0
                     self.sock.close()
@@ -273,9 +273,9 @@ class MES(MDApp):
 
     def on_start(self):
         # Запуск потока обработки сокета
-        log.info("Запущен основной поток обработки сервера")
         start_new_thread(self.connection, ())
         self.root.ids.date_pick.text = "Дата: " + str(date.today())
+        log.info("Запущен основной поток обработки сервера")
 
     # Метод вызываемый из потока self.connection в основном потоке для смены экрана
     @mainthread
@@ -355,7 +355,7 @@ class MES(MDApp):
     def SendUpdateTpaCards(self, dt):
         try:
             self.sock.send(pickle.dumps('NeedUpdate'))
-            log.info("Отправлено сообщение о требовании обновления списка карточек")
+            log.info("Отправлено сообщение о требовании обновления списка ТПА")
         except:
             pass
     #Метод применения изменений списка ТПА полученного с сервера
@@ -485,6 +485,7 @@ class MES(MDApp):
         log.info("Вывод графика за прошлую смену")
         self.root.ids.detailgraph.LoadGraphHistory(self.enddate, self.startdate,points,plan)
         self.root.ids.date_pick.text = "Дата: " + str(self.startdate)
+
     #Метод вывода информации об ошибке
     @mainthread
     def ShowAlert(self,errstr):
