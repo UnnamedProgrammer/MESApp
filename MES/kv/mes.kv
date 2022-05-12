@@ -236,14 +236,19 @@
                                     text_color: 1,1,1,1     
                                     on_release: app.change_window("idleWindow")                               
                                 OneLineListItem:
+                                    id: shifttask
                                     text: "Распоряжения: 0"
                                     bg_color: app.get_color("fbd255")  
                                     ext_color: 0,0,0,1  
+                                    on_release: app.change_window("ShiftTaskWindow")
             IdleWindow:
                 id: idlelist 
 
             EnteredWeightWindow:
                 id: enteredweightlist
+            
+            ShiftTaskWindow:
+                id: shifttasklist
 
     MDNavigationDrawer:
         id: nav_drawer

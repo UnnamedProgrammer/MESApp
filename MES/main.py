@@ -4,7 +4,7 @@ from kivy.utils import get_color_from_hex
 from kivy.clock import Clock
 #================================Интерфейс====================================
 from widgets.screenmanager import MESScreenManager
-from widgets.screens import MainWindow, SecondWindow, MainScreen, LoadingWindow, IdleWindow,EnteredWeightWindow
+from widgets.screens import MainWindow, SecondWindow, MainScreen, LoadingWindow, IdleWindow,EnteredWeightWindow, ShiftTaskWindow
 from widgets import RV, ContentNavigationDrawer, TpaCard
 from widgets.graph.DetailGraph import DetailGraph
 from kivymd.uix.picker import MDDatePicker
@@ -211,16 +211,8 @@ class MES(MDApp):
                             log.info("Данные после распаковки -> 'TpaDatePoints'")
                             if (DeserializeData["TpaDatePoints"] == []):
                                 self.addGraphFromServer(DeserializeData)
-                                self.loaddialog.dismiss()
-                                time.sleep(0.5)
-                                if(self.root.ids.manager.current != "SecondWindow"):
-                                    self.change_window("SecondWindow")
                             else:
                                 self.addGraphFromServer(DeserializeData)
-                                self.loaddialog.dismiss()
-                                time.sleep(0.5)
-                                if(self.root.ids.manager.current != "SecondWindow"):
-                                    self.change_window("SecondWindow")
                             IdleQuery = {}
                             try:
                                 IdleQuery['NeedTpaIdle'] = self.tpaReaderIds[self.root.ids.toolbar.title]
@@ -262,6 +254,10 @@ class MES(MDApp):
                             log.info("Данные после распаковки -> 'TpaIdleList'")
                             self.LoadIdle(DeserializeData)
                             self.LoadEnteredWeight(DeserializeData)
+                            self.LoadShiftTask(DeserializeData)
+                            self.loaddialog.dismiss()
+                            if(self.root.ids.manager.current != "SecondWindow"):
+                                self.change_window("SecondWindow")
                             continue
 
                 except socket.error as error:
@@ -442,6 +438,7 @@ class MES(MDApp):
         self.root.ids.diffprod.text = str(self.root.ids.detailgraph.diff)
         self.root.ids.endtime.text = self.root.ids.detailgraph.TimeToEndPlan
         log.info("График отрисован")
+
     def SendQueryForGraphHistory(self):
         log.info("Отправка сообщения для получения истории смен на графике")
         self.Show_loaddialog()
@@ -461,18 +458,27 @@ class MES(MDApp):
                                  datetime.now().day,
                                  7)
         enddate = startdate - timedelta(hours=12*self.previousShiftdateCount)
+        
         if(self.previousShiftdateCount > 1):
             startdate = enddate + timedelta(hours=12)
+
         data = {"NeedGraphHistoryPoint": {"StartDate": enddate,
                                           "EndDate": startdate,
-                                          "ReaderOid": self.tpaReaderIds[self.root.ids.toolbar.title]}}
+                                          "ReaderOid": self.tpaReaderIds[self.root.ids.toolbar.title]}}                                        
         packingData = pickle.dumps(data)
         self.sock.send(packingData)
+
+        dataidles = {"NeedHistoryIdles":{"StartDate": enddate,
+                                        "EndDate": startdate,
+                                        "ReaderOid": self.tpaReaderIds[self.root.ids.toolbar.title]}}
+        packingData = pickle.dumps(dataidles)
+        self.sock.send(packingData)
+
         self.enddate = startdate
         self.startdate = enddate
         self.root.ids.escape.opacity = 1
         self.root.ids.escape.disabled = False
-        log.info("Сообщение отправлено")
+        log.info("Запрос на информацию о предыдущей смене отправлен")
 
     @mainthread
     def AddHistoryGraphFromServer(self,points,plan):
@@ -516,7 +522,9 @@ class MES(MDApp):
             if(self.root.ids.manager.current == "idleWindow"):
                self.change_window("SecondWindow") 
             if(self.root.ids.manager.current == "EnteredWeightWindow"):
-                self.change_window("SecondWindow") 
+                self.change_window("SecondWindow")
+            if(self.root.ids.manager.current == "ShiftTaskWindow"):
+                self.change_window("SecondWindow")  
 
     @mainthread
     def AddEscapeGraphButton(self):
@@ -601,6 +609,37 @@ class MES(MDApp):
         layout.add_widget(DataTable)
         self.root.ids.enteredweightlist.add_widget(layout)
         log.info("Введенный вес загружен, таблица отрисована")
+
+    @mainthread
+    def LoadShiftTask(self,ShiftTaskList):
+        log.info("Загрузка распоряжений")
+        print(ShiftTaskList)
+        taskcount = 0
+        tablerowdata = []
+        for weight in list(ShiftTaskList['ShiftTask'].keys()):
+            row = (ShiftTaskList['ShiftTask'][taskcount]['name'],
+                   ShiftTaskList['ShiftTask'][taskcount]['start'],
+                   ShiftTaskList['ShiftTask'][taskcount]['end']
+                   )
+            taskcount += 1
+            tablerowdata.append(row)
+        self.root.ids.shifttask.text = "Распоряжения: "+str(taskcount)
+
+        self.root.ids.shifttasklist.clear_widgets()
+        layout = MDBoxLayout()
+        DataTable = MDDataTable(size_hint=(1, 1),
+                                use_pagination=True,
+                                column_data=[
+                                    ("Вид", dp(45)),
+                                    ("Начало", dp(35)),
+                                    ("Конец", dp(30))
+                                    ],
+                                row_data=tablerowdata
+                            )
+        layout.add_widget(DataTable)
+        self.root.ids.shifttasklist.add_widget(layout)
+        log.info("Распоряжения загружены, таблица отрисована")
+
 
 if __name__ == '__main__':
     MES().run()

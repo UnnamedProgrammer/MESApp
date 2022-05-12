@@ -2,10 +2,16 @@ import os
 import logging
 from datetime import datetime
 
-fdir = dir = os.path.dirname(__file__) + "\\logs\\"
-filename = r'Log_at_'+datetime.strftime(datetime.now(),'%Y-%m-%d %H-%M-%S')+'.log'
-os.path.join(fdir,filename)
-open(fdir+filename, 'w',encoding="utf-8").close()
+fdir = os.path.dirname(__file__) + "\\logs\\"
+if os.path.exists(fdir):
+    filename = r'Log_at_'+datetime.strftime(datetime.now(),'%Y-%m-%d %H-%M-%S')+'.log'
+    os.path.join(fdir,filename)
+    open(fdir+filename, 'w',encoding="utf-8").close()
+else:
+    os.mkdir(os.path.dirname(__file__) + "\\logs")
+    filename = r'Log_at_'+datetime.strftime(datetime.now(),'%Y-%m-%d %H-%M-%S')+'.log'
+    os.path.join(fdir,filename)
+    open(fdir+filename, 'w',encoding="utf-8").close()
 
 
 logging.basicConfig(
@@ -59,13 +65,19 @@ Screen:
         MDSeparator:  
 
         MDBoxLayout:
+            orientation: "vertical"
             size_hint_y: None
             size: (d.texture_size[0], d.texture_size[1] + 15)
             MDLabel:
                 id:d
                 halign: 'center'
                 text: "Подключенные пользователи" 
-                size: self.texture_size    
+                size: self.texture_size
+            MDLabel:
+                id: usercount
+                halign: 'center'
+                text: "Всего: " +str(app.clients)
+                size: self.texture_size       
 
         MDSeparator:  
 
@@ -88,7 +100,7 @@ class MESMobileServer(MDApp):
         self._app_window
         self.status = self.MobileServer.serverstatus
         self.manageractive = True
-
+        self.clients = 0
     def build(self):
         logging.info("Загрузка KV макета.")
         return Builder.load_string(KV)
@@ -122,8 +134,8 @@ class MESMobileServer(MDApp):
 
     def clientmanager(self):
         old_clients_count = len(self.MobileServer.clients)
+        time.sleep(0.7)
         while(self.manageractive):
-            time.sleep(1)
             self.status = self.MobileServer.serverstatus
             if(old_clients_count < len(self.MobileServer.clients)):
                 logging.info("Добавление клиента в список.")
@@ -131,6 +143,8 @@ class MESMobileServer(MDApp):
                 old_clients_count = len(self.MobileServer.clients)
                 for client in self.MobileServer.clients:
                     self.AddClient(client)
+                self.clients += 1
+                self.root.ids.usercount.text = "Всего: " + str(self.clients)
                 logging.info("Клиент успешно добавлен.")
 
             if(old_clients_count > len(self.MobileServer.clients)):
@@ -138,9 +152,10 @@ class MESMobileServer(MDApp):
                 self.clear_client_field()
                 old_clients_count = len(self.MobileServer.clients)
                 for client in self.MobileServer.clients:
-                    self.AddClient(client)  
+                    self.AddClient(client)
+                self.clients -= 1
+                self.root.ids.usercount.text = "Всего: " + str(self.clients)  
                 logging.info("Клиент успешно удалён из списка.")
-
     @mainthread
     def AddClient(self,client):
         list_item = OneLineIconListItem(text=str(client))

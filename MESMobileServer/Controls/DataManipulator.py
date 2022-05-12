@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import pyodbc
 
@@ -421,17 +421,26 @@ class DataManipulator():
 
         return packet
 
-    # Запрос вытаскивающий простои ТПА
-    def GetTpaIdle(self,repobj):
-        # try:
-        nightshift = False
-        # Проверка на времени смены (дневная, ночная)
-        if (datetime.now().hour >= 7 and datetime.now().hour < 19):
+    # Запрос вытаскивающий простои ТПА, введенный вес, и распоряжения
+    def GetTpaIdle(self,repobj,date):
+        logging.info("SQLManipulator -> GetTpaIdle")
+        try:
+            editresult = {'TpaIdleList': {},'EnteredWeight': {},'ShiftTask': {}}
             nightshift = False
-        else:
-            nightshift = True
-        
-        if(nightshift == False):
+            if(date != None):
+                nightshift = False
+                # Проверка на времени смены (дневная, ночная)
+                if (date.hour >= 7 and date.hour < 19):
+                    nightshift = False
+                else:
+                    nightshift = True
+            else:
+                if (datetime.now().hour >= 7 and datetime.now().hour < 19):
+                    date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    nightshift = False
+                else:
+                    nightshift = True
+            
             query = f''' 
                 SELECT [MESIdleJournal].[Oid]
                     ,[MESIdleJournal].[RepairObject]
@@ -452,7 +461,6 @@ class DataManipulator():
             '''
             self.Connections['EAM_test'].execute(query)
             result = self.Connections['EAM_test'].fetchall()
-            editresult = {'TpaIdleList': {},'EnteredWeight': {}}
             if (len(result) > 0):
                 for idle in result:
                     editresult['TpaIdleList'][idle[0]] = {
@@ -460,16 +468,14 @@ class DataManipulator():
                         'start': idle[2],
                         'end': idle[3]
                     }
-            EnteredWeight = self.GetTpaWeight(repobj)
+            EnteredWeight = self.GetTpaWeight(repobj,date)
             i = 0
-            print(EnteredWeight)
-            if(EnteredWeight != []):
+            if(EnteredWeight != [] and EnteredWeight != None ):
                 for weight in EnteredWeight:
-                    print(weight)
                     if(weight[0] == None and 
-                       weight[1] == None and 
-                       weight[2] == None):
-                       continue
+                    weight[1] == None and 
+                    weight[2] == None):
+                        continue
                     editresult['EnteredWeight'][i] = {
                         'weight': weight[0],
                         'date': weight[1],
@@ -477,19 +483,50 @@ class DataManipulator():
                     }
                     i += 1
 
-        # except pyodbc.Error as e:
-        #     print(e)
-        #     return
+            ShiftTasks = self.ShiftTask(repobj,date)
+            i = 0
+            if(ShiftTasks != []):
+                for task in ShiftTasks:
+                    if(task[0] == None and 
+                    task[1] == None and 
+                    task[2] == None):
+                        continue
+                    editresult['ShiftTask'][i] = {
+                        'name': task[0],
+                        'start': task[1],
+                        'end': task[2]
+                    }
+                    i += 1
+        except pyodbc.Error as e:
+            print(e)
+            return
         return editresult
 
     # Метод для вытаскивания введенного веса ТПА
-    def GetTpaWeight(self,repobj):
-        nightshift = False
+    def GetTpaWeight(self,repobj,date):
+        logging.info("SQLManipulator -> GetTpaWeight")
         # Проверка на времени смены (дневная, ночная)
-        if (datetime.now().hour >= 7 and datetime.now().hour < 19):
+        result = None
+        nightshift = False
+        if(isinstance(date,str)):
+            checkdate = datetime.strptime(date,"%Y-%m-%d %H:%M:%S")
+        else: 
+            checkdate = date
+        if(date != None):
             nightshift = False
+            # Проверка на времени смены (дневная, ночная)
+            if (checkdate.hour >= 7 and checkdate.hour < 19):
+                nightshift = False
+            else:
+                nightshift = True
         else:
-            nightshift = True
+            nightshift = False
+            # Проверка на времени смены (дневная, ночная)
+            if (datetime.now().hour >= 7 and datetime.now().hour < 19):
+                date = datetime.now().strftime("%Y-%m-%d")
+                nightshift = False
+            else:
+                nightshift = True
         
         if(nightshift == False):
             query = f''' 
@@ -529,3 +566,106 @@ class DataManipulator():
             self.Connections['EAM_test'].execute(query)
             result = self.Connections['EAM_test'].fetchall()
         return result
+    
+    def ShiftTask(self,repobj,date: datetime):
+        logging.info("SQLManipulator -> ShiftTask")
+        nightshift = False
+        if(isinstance(date,str)):
+            checkdate = datetime.strptime(date,"%Y-%m-%d %H:%M:%S")
+        else: 
+            checkdate = date
+        if(date != None):
+            # Проверка на времени смены (дневная, ночная)
+            if (checkdate.hour >= 7 and checkdate.hour < 19):
+                nightshift = False
+            else:
+                nightshift = True
+        else:
+            # Проверка на времени смены (дневная, ночная)
+            if (datetime.now().hour >= 7 and datetime.now().hour < 19):
+                nightshift = False
+                date = datetime.now().strftime("%Y-%m-%d")
+            else:
+                nightshift = True
+        date = checkdate.strftime("%Y-%m-%d")
+        if (nightshift == False):
+            query = f'''
+                SELECT JRAB.[Наименование], RAS.[НачалоПлан],RAS.[ОкончаниеПлан]
+                    FROM EAM_Iplast.dbo.[распоряжение] AS RAS
+                    LEFT JOIN EAM_Iplast.dbo.[ЖурналРабот] AS JRAB ON JRAB.[Номер] = RAS.[Номераработ]
+                    LEFT JOIN EAM_Iplast.dbo.[ОбъектРемонта] AS JREM ON JREM.[Oid] = JRAB.[ОбъектРемонта]
+                    LEFT JOIN EAM_Iplast.dbo.[ВидРемонта] AS VREM ON VREM.[Oid] = JRAB.[ВидРемонта]
+                    LEFT JOIN EAM_Iplast.dbo.[ИсполнительРемонта] AS IREM ON IREM.[Oid] = RAS.[Исполнитель]
+                    LEFT JOIN [EAM_test].[dbo].[RFIDReader] AS RR ON RR.[Oid] = '{repobj}'
+                WHERE
+
+                    (([JREM].[Oid]=RR.Asset) OR ([JRAB].[WorkCenter]=RR.Asset)) 
+                    AND RAS.[Статус] != 0
+                    AND IREM.[Oid] = 'A414E44A-D5E1-11E3-81F7-000D8843C05A'
+                    AND RAS.[Статус] != 0
+                    AND IREM.[Oid] = 'A414E44A-D5E1-11E3-81F7-000D8843C05A' AND
+                    DATENAME(HOUR, RAS.[НачалоПлан]) >= 7 AND 
+                    DATENAME(HOUR, RAS.[НачалоПлан]) <= 19 AND 
+                    DATENAME(YEAR, RAS.[НачалоПлан]) = DATENAME(YEAR, '{date}') AND
+                    DATENAME(MONTH, RAS.[НачалоПлан]) = DATENAME(MONTH, '{date}') AND
+                    DATENAME(DAY, RAS.[НачалоПлан]) = DATENAME(DAY, '{date}') AND
+                    RR.Active = 1
+                ORDER BY RAS.[НачалоПлан] ASC;
+            '''
+            self.Connections['EAM_test'].execute(query)
+            result = self.Connections['EAM_test'].fetchall()
+            return result
+        else:
+            query = f'''
+                SELECT JRAB.[Наименование], RAS.[НачалоПлан],RAS.[ОкончаниеПлан]
+                    FROM EAM_Iplast.dbo.[распоряжение] AS RAS
+                    LEFT JOIN EAM_Iplast.dbo.[ЖурналРабот] AS JRAB ON JRAB.[Номер] = RAS.[Номераработ]
+                    LEFT JOIN EAM_Iplast.dbo.[ОбъектРемонта] AS JREM ON JREM.[Oid] = JRAB.[ОбъектРемонта]
+                    LEFT JOIN EAM_Iplast.dbo.[ВидРемонта] AS VREM ON VREM.[Oid] = JRAB.[ВидРемонта]
+                    LEFT JOIN EAM_Iplast.dbo.[ИсполнительРемонта] AS IREM ON IREM.[Oid] = RAS.[Исполнитель]
+                    LEFT JOIN [EAM_test].[dbo].[RFIDReader] AS RR ON RR.[Oid] = '{repobj}'
+                WHERE
+
+                    (([JREM].[Oid]=RR.Asset) OR ([JRAB].[WorkCenter]=RR.Asset)) 
+                    AND RAS.[Статус] != 0
+                    AND IREM.[Oid] = 'A414E44A-D5E1-11E3-81F7-000D8843C05A'
+                    AND RAS.[Статус] != 0
+                    AND IREM.[Oid] = 'A414E44A-D5E1-11E3-81F7-000D8843C05A' AND
+                    DATENAME(HOUR, RAS.[НачалоПлан]) >= 19 AND 
+                    DATENAME(HOUR, RAS.[НачалоПлан]) <= 23 AND 
+                    DATENAME(YEAR, RAS.[НачалоПлан]) = DATENAME(YEAR, '{date}') AND
+                    DATENAME(MONTH, RAS.[НачалоПлан]) = DATENAME(MONTH, '{date}') AND
+                    DATENAME(DAY, RAS.[НачалоПлан]) = DATENAME(DAY, '{date}') AND
+                    RR.Active = 1
+                ORDER BY RAS.[НачалоПлан] ASC;
+            '''
+            self.Connections['EAM_test'].execute(query)
+            result = self.Connections['EAM_test'].fetchall()
+            date = datetime.strptime(date,"%Y-%m-%d") + timedelta(days=1)
+            date = date.strftime("%Y-%m-%d")
+            query2 = f'''
+                SELECT JRAB.[Наименование], RAS.[НачалоПлан],RAS.[ОкончаниеПлан]
+                    FROM EAM_Iplast.dbo.[распоряжение] AS RAS
+                    LEFT JOIN EAM_Iplast.dbo.[ЖурналРабот] AS JRAB ON JRAB.[Номер] = RAS.[Номераработ]
+                    LEFT JOIN EAM_Iplast.dbo.[ОбъектРемонта] AS JREM ON JREM.[Oid] = JRAB.[ОбъектРемонта]
+                    LEFT JOIN EAM_Iplast.dbo.[ВидРемонта] AS VREM ON VREM.[Oid] = JRAB.[ВидРемонта]
+                    LEFT JOIN EAM_Iplast.dbo.[ИсполнительРемонта] AS IREM ON IREM.[Oid] = RAS.[Исполнитель]
+                    LEFT JOIN [EAM_test].[dbo].[RFIDReader] AS RR ON RR.[Oid] = '{repobj}'
+                WHERE
+
+                    (([JREM].[Oid]=RR.Asset) OR ([JRAB].[WorkCenter]=RR.Asset)) 
+                    AND RAS.[Статус] != 0
+                    AND IREM.[Oid] = 'A414E44A-D5E1-11E3-81F7-000D8843C05A'
+                    AND RAS.[Статус] != 0
+                    AND IREM.[Oid] = 'A414E44A-D5E1-11E3-81F7-000D8843C05A' AND
+                    DATENAME(HOUR, RAS.[НачалоПлан]) >= 0 AND 
+                    DATENAME(HOUR, RAS.[НачалоПлан]) <= 7 AND 
+                    DATENAME(YEAR, RAS.[НачалоПлан]) = DATENAME(YEAR, '{date}') AND
+                    DATENAME(MONTH, RAS.[НачалоПлан]) = DATENAME(MONTH, '{date}') AND
+                    DATENAME(DAY, RAS.[НачалоПлан]) = DATENAME(DAY, '{date}') AND
+                    RR.Active = 1
+                ORDER BY RAS.[НачалоПлан] ASC;
+            '''
+            self.Connections['EAM_test'].execute(query2)
+            endresult = self.Connections['EAM_test'].fetchall()
+            return result + endresult

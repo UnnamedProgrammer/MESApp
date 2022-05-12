@@ -92,7 +92,8 @@ class Server():
         Manupulator = None
         try:
             # Создаём SQL подключение для клиента, в случае сбоя 
-            # отправим сообщение с ошибкой и завершим поток         
+            # отправим сообщение с ошибкой и завершим поток     
+            self.clients.append(addr)    
             connection = None
             Connections = {}
             for Base in self.ConnectionsStrings:
@@ -127,9 +128,7 @@ class Server():
             size4bytes = struct.pack("I",size)
             client.send(size4bytes)
             client.send(TpaReaderList)
-            self.clients.append(addr)
-        except error:
-            print(error)
+        except:
             self.clients.remove(addr)
             self.worksthreads[str(addr)] = False
             return
@@ -181,13 +180,20 @@ class Server():
                         
                         if(list(client_answer.keys())[0] == "NeedTpaIdle"):
                             logging.info("Данные от клиента: " + str(addr) + "--> " + str("NeedTpaIdle"))
-                            idlelist = pickle.dumps(Manupulator.GetTpaIdle(client_answer["NeedTpaIdle"]))
+                            idlelist = pickle.dumps(Manupulator.GetTpaIdle(client_answer["NeedTpaIdle"],None))
                             size = len(idlelist)
                             size4bytes = struct.pack("I",size)
                             client.send(size4bytes)
                             client.send(idlelist)
-                            
-
+                        
+                        if(list(client_answer.keys())[0] == "NeedHistoryIdles"):
+                            logging.info("Данные от клиента: " + str(addr) + "--> " + str("NeedHistoryIdles"))
+                            idlelist = pickle.dumps(Manupulator.GetTpaIdle(client_answer["NeedHistoryIdles"]["ReaderOid"],
+                                                                        client_answer["NeedHistoryIdles"]["StartDate"]))
+                            size = len(idlelist)
+                            size4bytes = struct.pack("I",size)
+                            client.send(size4bytes)
+                            client.send(idlelist)
             except:
                 # Если случилась непредвиденная ошибка либо не правильно отработал
                 # процесс отключения, то убираем клиента из списка и завершаем поток
