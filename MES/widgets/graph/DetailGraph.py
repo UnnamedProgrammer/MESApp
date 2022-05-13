@@ -25,7 +25,7 @@ class DetailGraph(MDBoxLayout):
         self.oldEndTime = None
 
     # Метод построения графика статистики по машине
-    def LoadGraph(self, datepointsdict, productplan, productfact,machinename):
+    def LoadGraph(self, datepointsdict, productplan, productfact, machinename):
         self.clear_widgets()
         productpoints = []
         self.productfact = productfact
@@ -75,10 +75,10 @@ class DetailGraph(MDBoxLayout):
                            "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00"]
 
             ax.set_xticklabels(xlabels, rotation=45)
-            plt.title(machinename,fontsize=dp(8))
+            plt.title(machinename, fontsize=dp(8))
             #Установка шага для осей
             arrlim = [0]
-            for i in range(1,13):
+            for i in range(1, 13):
                 arrlim.append(arrlim[i-1] + int(productplan)/12)
             plt.yticks(arrlim)
             plt.fill_between(self.makedate(dt.datetime.strftime(dt.datetime.now(), "%H:%M"), "19:00"), int(
@@ -86,9 +86,10 @@ class DetailGraph(MDBoxLayout):
 
         #Формирование графика
         if(datepoints != []):
-            plt.plot(self.xpoints, self.ypoints, color="#408DD2", linewidth=dp(1))
+            plt.plot(self.xpoints, self.ypoints,
+                     color="#408DD2", linewidth=dp(1))
             plt.plot(self.xfactpoints, self.yfactpoints,
-                    color="#28A745", linewidth=dp(2))
+                     color="#28A745", linewidth=dp(2))
             self.diff = self.getDiff()
         graph = FigureCanvasKivyAgg(plt.gcf())
         self.add_widget(graph)
@@ -155,10 +156,10 @@ class DetailGraph(MDBoxLayout):
             xlabels = ["19:00", "20:00", "21:00", "22:00", "23:00", "00:00",
                        "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00"]
 
-        plt.title(machinename,fontsize=dp(8))
+        plt.title(machinename, fontsize=dp(8))
         #Установка шага для оси Y
         arrlim = [0]
-        for i in range(1,13):
+        for i in range(1, 13):
             arrlim.append(arrlim[i-1] + int(plan)/12)
         plt.yticks(arrlim)
 

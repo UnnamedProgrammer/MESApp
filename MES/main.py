@@ -4,7 +4,7 @@ from kivy.utils import get_color_from_hex
 from kivy.clock import Clock
 #================================Интерфейс====================================
 from widgets.screenmanager import MESScreenManager
-from widgets.screens import MainWindow, SecondWindow, MainScreen, LoadingWindow, IdleWindow,EnteredWeightWindow, ShiftTaskWindow
+from widgets.screens import MainWindow, SecondWindow, MainScreen, LoadingWindow, IdleWindow, EnteredWeightWindow, ShiftTaskWindow
 from widgets import RV, ContentNavigationDrawer, TpaCard
 from widgets.graph.DetailGraph import DetailGraph
 from kivymd.uix.picker import MDDatePicker
@@ -63,6 +63,7 @@ class MES(MDApp):
         self.startdate = None
         self.escapebuttoncreated = False
         self.installedPressForms = {}
+
     def get_color(self, hex):
         log.info("Задействована функция get_color")
         return get_color_from_hex(hex)
@@ -88,17 +89,20 @@ class MES(MDApp):
             try:
                 self.root.ids.toolbar.title = "Ожидание сервера..."
                 if(self.connected == False):
-                    log.info("Подключение к серверу: "+str(self.serverhost) + ":" +str(self.serverport))
+                    log.info("Подключение к серверу: " +
+                             str(self.serverhost) + ":" + str(self.serverport))
                     self.root.ids.load_spin.active = True
                     self.root.ids.load_status_hint.text = 'Подключение...'
-                    self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self.sock = socket.socket(
+                        socket.AF_INET, socket.SOCK_STREAM)
                     self.sock.connect((self.serverhost, self.serverport))
                     self.sock.setblocking(0)
                     self.connected = True
                     log.info("Подключение успешно")
                     break
             except socket.error as e:
-                log.info("Подключение не удалось, отсчет до повторного подключения")
+                log.info(
+                    "Подключение не удалось, отсчет до повторного подключения")
                 self.root.ids.toolbar.title = "Подключение..."
                 seconds = 5
                 secondsendlist = ['секунду.', 'секунды.', 'секунд.']
@@ -145,7 +149,7 @@ class MES(MDApp):
                         packetsize = self.sock.recv(4)
                     except socket.error as e:
                         if(e.strerror == "Удаленный хост принудительно разорвал существующее подключение" or
-                            e.strerror == "Connection reset by peer"):
+                                e.strerror == "Connection reset by peer"):
                             self.connected = False
                         else:
                             continue
@@ -154,9 +158,9 @@ class MES(MDApp):
                         try:
                             size = struct.unpack("I", packetsize)
                             #Получаем данные исходя из их размеров
-                            if (size[0]>4096):
+                            if (size[0] > 4096):
                                 while True:
-                                    try:                      
+                                    try:
                                         log.info("Получаю данные от сервера")
                                         data = self.sock.recv(size[0])
                                         if not data:
@@ -169,15 +173,16 @@ class MES(MDApp):
                                 log.info("Получаю данные от сервера")
                                 data = self.sock.recv(size[0])
                             lendata = len(data)
-                            sizepack = struct.pack("I",lendata)
+                            sizepack = struct.pack("I", lendata)
                             size = struct.unpack("I", sizepack)
                             log.info(f"Получено: {str(size[0]/1024)}Кб данных")
-                            try:    
+                            try:
                                 DeserializeData = pickle.loads(data)
                                 log.info("Данные распакованы")
                             except:
                                 if(self.connected != False):
-                                    self.ShowAlert("Не получилось распаковать данные, попробуйте еще.")
+                                    self.ShowAlert(
+                                        "Не получилось распаковать данные, попробуйте еще.")
                                     log.warning("Ошибка при распаковке данных")
                                 else:
                                     pass
@@ -186,9 +191,10 @@ class MES(MDApp):
                     if isinstance(DeserializeData, dict):
                         # Получаем список ТПА при первом подключении
                         if list(DeserializeData.keys())[0] == 'TpaListFromServer':
-                            log.info("Данные после распаковки -> 'TpaListFromServer'")
+                            log.info(
+                                "Данные после распаковки -> 'TpaListFromServer'")
                             TpaList = DeserializeData['TpaListFromServer']
-                            
+
                             self.PutTpaUpdate(TpaList)
                             self.change_window("MainWindow")
                             self.root.ids.toolbar.title = "Информация по ТПА"
@@ -196,20 +202,23 @@ class MES(MDApp):
 
                         #Получение списка ТПА и соответствующих им Oid считывателей
                         if(list(DeserializeData.keys())[0]) == "TpaReaderList":
-                            log.info("Данные после распаковки -> 'TpaReaderList'")
+                            log.info(
+                                "Данные после распаковки -> 'TpaReaderList'")
                             self.tpaReaderIds = DeserializeData["TpaReaderList"]
                             continue
 
                         # Получаем обновлённый список ТПА после запроса к серверу
                         if list(DeserializeData.keys())[0] == 'UpdateTpaListFromServer':
-                            log.info("Данные после распаковки -> 'UpdateTpaListFromServer'")
+                            log.info(
+                                "Данные после распаковки -> 'UpdateTpaListFromServer'")
                             UpdatedTpaList = DeserializeData['UpdateTpaListFromServer']
                             self.PutTpaUpdate(UpdatedTpaList)
                             continue
 
                         #Получение данных для вывода графика, статистики, простоев и распоряжений
                         if list(DeserializeData.keys())[0] == 'TpaDatePoints':
-                            log.info("Данные после распаковки -> 'TpaDatePoints'")
+                            log.info(
+                                "Данные после распаковки -> 'TpaDatePoints'")
                             if (DeserializeData["TpaDatePoints"] == []):
                                 self.addGraphFromServer(DeserializeData)
                             else:
@@ -227,22 +236,24 @@ class MES(MDApp):
                             continue
 
                         if list(DeserializeData.keys())[0] == 'HistoryDatePoints':
-                            log.info("Данные после распаковки -> 'HistoryDatePoints'")
+                            log.info(
+                                "Данные после распаковки -> 'HistoryDatePoints'")
                             if (DeserializeData["HistoryDatePoints"] == []):
-                                self.loaddialog.dismiss()                              
-                                self.ShowAlert("Данные на выбранную дату отсутствуют.") 
+                                self.loaddialog.dismiss()
+                                self.ShowAlert(
+                                    "Данные на выбранную дату отсутствуют.")
                             else:
                                 try:
                                     self.AddHistoryGraphFromServer(DeserializeData,
-                                        DeserializeData["Plan"][self.root.ids.toolbar.title]["plan"])
+                                                                   DeserializeData["Plan"][self.root.ids.toolbar.title]["plan"])
                                     if (self.escapebuttoncreated == False):
                                         self.AddEscapeGraphButton()
                                         self.escapebuttoncreated = True
-                                    self.loaddialog.dismiss()  
+                                    self.loaddialog.dismiss()
                                 except KeyError:
                                     self.AddHistoryGraphFromServer(DeserializeData,
-                                        300)
-                                    self.loaddialog.dismiss()  
+                                                                   300)
+                                    self.loaddialog.dismiss()
                             continue
 
                         if list(DeserializeData.keys())[0] == 'SQLError':
@@ -252,7 +263,8 @@ class MES(MDApp):
                             continue
 
                         if list(DeserializeData.keys())[0] == 'TpaIdleList':
-                            log.info("Данные после распаковки -> 'TpaIdleList'")
+                            log.info(
+                                "Данные после распаковки -> 'TpaIdleList'")
                             self.LoadIdle(DeserializeData)
                             self.LoadEnteredWeight(DeserializeData)
                             self.LoadShiftTask(DeserializeData)
@@ -362,6 +374,7 @@ class MES(MDApp):
         except:
             pass
     #Метод применения изменений списка ТПА полученного с сервера
+
     @mainthread
     def ApplyTpaUpdate(self):
         self.root.ids.container.data = self.rvdata
@@ -437,7 +450,7 @@ class MES(MDApp):
         self.root.ids.weightnorm.text = str(self.weightnorm)
         self.root.ids.detailgraph.clear_widgets()
         self.root.ids.detailgraph.LoadGraph(
-            datepoints, self.TakeProductsPlanForTpaDetail, self.TakeProductFact,self.installedPressForms[self.root.ids.toolbar.title])
+            datepoints, self.TakeProductsPlanForTpaDetail, self.TakeProductFact, self.installedPressForms[self.root.ids.toolbar.title])
         self.root.ids.diffprod.text = str(self.root.ids.detailgraph.diff)
         self.root.ids.endtime.text = self.root.ids.detailgraph.TimeToEndPlan
         log.info("График отрисован")
@@ -461,19 +474,19 @@ class MES(MDApp):
                                  datetime.now().day,
                                  7)
         enddate = startdate - timedelta(hours=12*self.previousShiftdateCount)
-        
+
         if(self.previousShiftdateCount > 1):
             startdate = enddate + timedelta(hours=12)
 
         data = {"NeedGraphHistoryPoint": {"StartDate": enddate,
                                           "EndDate": startdate,
-                                          "ReaderOid": self.tpaReaderIds[self.root.ids.toolbar.title]}}                                        
+                                          "ReaderOid": self.tpaReaderIds[self.root.ids.toolbar.title]}}
         packingData = pickle.dumps(data)
         self.sock.send(packingData)
 
-        dataidles = {"NeedHistoryIdles":{"StartDate": enddate,
-                                        "EndDate": startdate,
-                                        "ReaderOid": self.tpaReaderIds[self.root.ids.toolbar.title]}}
+        dataidles = {"NeedHistoryIdles": {"StartDate": enddate,
+                                          "EndDate": startdate,
+                                          "ReaderOid": self.tpaReaderIds[self.root.ids.toolbar.title]}}
         packingData = pickle.dumps(dataidles)
         self.sock.send(packingData)
 
@@ -484,14 +497,15 @@ class MES(MDApp):
         log.info("Запрос на информацию о предыдущей смене отправлен")
 
     @mainthread
-    def AddHistoryGraphFromServer(self,points,plan):
+    def AddHistoryGraphFromServer(self, points, plan):
         log.info("Вывод графика за прошлую смену")
-        self.root.ids.detailgraph.LoadGraphHistory(self.enddate, self.startdate,points,plan,self.installedPressForms[self.root.ids.toolbar.title])
+        self.root.ids.detailgraph.LoadGraphHistory(
+            self.enddate, self.startdate, points, plan, self.installedPressForms[self.root.ids.toolbar.title])
         self.root.ids.date_pick.text = "Дата: " + str(self.startdate)
 
     #Метод вывода информации об ошибке
     @mainthread
-    def ShowAlert(self,errstr):
+    def ShowAlert(self, errstr):
         self.dialog = MDDialog(
             title="ОШИБКА",
             text=errstr,
@@ -524,11 +538,11 @@ class MES(MDApp):
                 self.startdate = None
                 self.root.ids.date_pick.text = "Дата: " + str(date.today())
             if(self.root.ids.manager.current == "idleWindow"):
-               self.change_window("SecondWindow") 
+               self.change_window("SecondWindow")
             if(self.root.ids.manager.current == "EnteredWeightWindow"):
                 self.change_window("SecondWindow")
             if(self.root.ids.manager.current == "ShiftTaskWindow"):
-                self.change_window("SecondWindow")  
+                self.change_window("SecondWindow")
 
     @mainthread
     def AddEscapeGraphButton(self):
@@ -548,7 +562,7 @@ class MES(MDApp):
         self.root.ids.escape.disabled = True
 
     @mainthread
-    def LoadIdle(self,IdleListFromServer):
+    def LoadIdle(self, IdleListFromServer):
         log.info("Загрузка простоев")
         idlecount = 0
         tablerowdata = []
@@ -578,15 +592,15 @@ class MES(MDApp):
                                     ("Причина", dp(30)),
                                     ("Примечание", dp(30)),
                                     ("Наладчик", dp(20))
-                                    ],
-                                row_data=tablerowdata
-                            )
+        ],
+            row_data=tablerowdata
+        )
         layout.add_widget(DataTable)
         self.root.ids.idlelist.add_widget(layout)
         log.info("Простои загружены, таблица отрисована")
-    
+
     @mainthread
-    def LoadEnteredWeight(self,weightlist):
+    def LoadEnteredWeight(self, weightlist):
         log.info("Загрузка введенного веса")
         weightcount = 0
         srweight = 0
@@ -596,11 +610,12 @@ class MES(MDApp):
                    weightlist['EnteredWeight'][weightcount]['date'],
                    weightlist['EnteredWeight'][weightcount]['creator']
                    )
-            srweight +=float(weightlist['EnteredWeight'][weightcount]['weight'])
+            srweight += float(weightlist['EnteredWeight']
+                              [weightcount]['weight'])
             weightcount += 1
             tablerowdata.append(row)
         if(weightcount != 0):
-            srweight = round(srweight/weightcount,2)
+            srweight = round(srweight/weightcount, 2)
         self.root.ids.enteredweight.text = "Введенный вес: "+str(weightcount)
         self.root.ids.srweight.text = str(srweight)
         self.root.ids.enteredweightlist.clear_widgets()
@@ -611,15 +626,15 @@ class MES(MDApp):
                                     ("Вес", dp(35)),
                                     ("Время", dp(35)),
                                     ("Оператор", dp(50))
-                                    ],
-                                row_data=tablerowdata
-                            )
+        ],
+            row_data=tablerowdata
+        )
         layout.add_widget(DataTable)
         self.root.ids.enteredweightlist.add_widget(layout)
         log.info("Введенный вес загружен, таблица отрисована")
 
     @mainthread
-    def LoadShiftTask(self,ShiftTaskList):
+    def LoadShiftTask(self, ShiftTaskList):
         log.info("Загрузка распоряжений")
         taskcount = 0
         tablerowdata = []
@@ -640,9 +655,9 @@ class MES(MDApp):
                                     ("Вид", dp(45)),
                                     ("Начало", dp(35)),
                                     ("Конец", dp(30))
-                                    ],
-                                row_data=tablerowdata
-                            )
+        ],
+            row_data=tablerowdata
+        )
         layout.add_widget(DataTable)
         self.root.ids.shifttasklist.add_widget(layout)
         log.info("Распоряжения загружены, таблица отрисована")

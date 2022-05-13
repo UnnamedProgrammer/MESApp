@@ -1,44 +1,45 @@
+from kivymd.uix.list import OneLineIconListItem, IconLeftWidget
+import time
+import socket
+from kivy.utils import get_color_from_hex
+from kivy.clock import mainthread
+from kivy.lang.builder import Builder
+from _thread import *
+from kivymd.app import MDApp
+from Controls.Server import Server
+from threading import main_thread
+from kivy.config import Config
+from concurrent.futures import thread
 import os
 import logging
 from datetime import datetime
 
 fdir = os.path.dirname(__file__) + "\\logs\\"
 if os.path.exists(fdir):
-    filename = r'Log_at_'+datetime.strftime(datetime.now(),'%Y-%m-%d %H-%M-%S')+'.log'
-    os.path.join(fdir,filename)
-    open(fdir+filename, 'w',encoding="utf-8").close()
+    filename = r'Log_at_' + \
+        datetime.strftime(datetime.now(), '%Y-%m-%d %H-%M-%S')+'.log'
+    os.path.join(fdir, filename)
+    open(fdir+filename, 'w', encoding="utf-8").close()
 else:
     os.mkdir(os.path.dirname(__file__) + "\\logs")
-    filename = r'Log_at_'+datetime.strftime(datetime.now(),'%Y-%m-%d %H-%M-%S')+'.log'
-    os.path.join(fdir,filename)
-    open(fdir+filename, 'w',encoding="utf-8").close()
+    filename = r'Log_at_' + \
+        datetime.strftime(datetime.now(), '%Y-%m-%d %H-%M-%S')+'.log'
+    os.path.join(fdir, filename)
+    open(fdir+filename, 'w', encoding="utf-8").close()
 
 
 logging.basicConfig(
     level=logging.INFO,
     encoding="utf-8",
-    filename= fdir+filename,
-    format= "%(asctime)s - %(levelname)s - %(message)s",
+    filename=fdir+filename,
+    format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt='%H:%M:%S'
 )
 
-from concurrent.futures import thread
-from kivy.config import Config
 Config.set('graphics', 'width', '300')
 Config.set('graphics', 'height', '500')
 Config.set('graphics', 'resizable', False)
 
-from threading import main_thread
-from Controls.Server import Server
-from kivymd.app import MDApp
-from _thread import *
-from kivy.lang.builder import Builder
-from kivymd.uix.list import OneLineIconListItem,IconLeftWidget
-from kivy.clock import mainthread
-from kivy.utils import get_color_from_hex
-import socket
-import time
-import os
 
 KV = '''
 Screen:
@@ -92,6 +93,7 @@ Screen:
                 height: self.minimum_height
 '''
 
+
 class MESMobileServer(MDApp):
     def __init__(self):
         super().__init__()
@@ -101,6 +103,7 @@ class MESMobileServer(MDApp):
         self.status = self.MobileServer.serverstatus
         self.manageractive = True
         self.clients = 0
+
     def build(self):
         logging.info("Загрузка KV макета.")
         return Builder.load_string(KV)
@@ -114,9 +117,10 @@ class MESMobileServer(MDApp):
             self.root.ids.status.text = "Статус: Включен"
             self.manageractive = True
             self.MobileServer.runsocket = True
-            self.MobileServer.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            start_new_thread(self.MobileServer.ServerRun,())
-            start_new_thread(self.clientmanager,())
+            self.MobileServer.sock = socket.socket(
+                socket.AF_INET, socket.SOCK_STREAM)
+            start_new_thread(self.MobileServer.ServerRun, ())
+            start_new_thread(self.clientmanager, ())
             logging.info("Кнопка отработала успешно")
         else:
             logging.info("Нажата кнопка 'Выключить'.")
@@ -124,7 +128,7 @@ class MESMobileServer(MDApp):
             self.manageractive = False
             self.MobileServer.runsocket = False
             while(self.MobileServer.worksthreads["AcceptClients"] == True):
-                  self.MobileServer.sock.close()
+                self.MobileServer.sock.close()
             for i in range(0, len(self.MobileServer.client_sockets)):
                 self.MobileServer.client_sockets[i].close()
             self.root.ids.but.md_bg_color = self.change_color("#37DB79")
@@ -154,10 +158,11 @@ class MESMobileServer(MDApp):
                 for client in self.MobileServer.clients:
                     self.AddClient(client)
                 self.clients -= 1
-                self.root.ids.usercount.text = "Всего: " + str(self.clients)  
+                self.root.ids.usercount.text = "Всего: " + str(self.clients)
                 logging.info("Клиент успешно удалён из списка.")
+
     @mainthread
-    def AddClient(self,client):
+    def AddClient(self, client):
         list_item = OneLineIconListItem(text=str(client))
         list_item.add_widget(IconLeftWidget(icon="account"))
         self.root.ids.client_list.add_widget(list_item)
@@ -166,12 +171,12 @@ class MESMobileServer(MDApp):
     def clear_client_field(self):
         self.root.ids.client_list.clear_widgets()
 
-    def change_color(self,color):
+    def change_color(self, color):
         return get_color_from_hex(color)
 
     def on_start(self):
         pass
 
+
 if __name__ == "__main__":
     MESMobileServer().run()
-

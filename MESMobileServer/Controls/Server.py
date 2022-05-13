@@ -1,5 +1,4 @@
 from datetime import datetime
-from numpy import isin
 import pyodbc
 import socket
 import os
@@ -7,12 +6,12 @@ from .DataManipulator import DataManipulator
 import pickle
 from _thread import *
 import struct
-import time
 import logging
+
 
 class Server():
     def __init__(self):
-        logging.info("==============Инициализация сервера==============")      
+        logging.info("==============Инициализация сервера==============")
         #Словарь SQL запросов
         self.requests = {}
         #Словарь соединений к SQL базе
@@ -21,7 +20,7 @@ class Server():
             'EAM_Iplast': 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=WORK2-APPSERV-8;DATABASE=EAM_Iplast;UID=terminal;PWD=xAlTeS3dGrh7;TrustServerCertificate=yes',
             'EAM_test': 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=WORK2-APPSERV-8;DATABASE=EAM_test;UID=terminal;PWD=xAlTeS3dGrh7;TrustServerCertificate=yes',
             'Terminal': 'DRIVER={ODBC Driver 18 for SQL Server};SERVER=WORK2-APPSERV-8;DATABASE=EAM_test;UID=terminal;PWD=xAlTeS3dGrh7;TrustServerCertificate=yes'
-        }         
+        }
         self.sock = None
         self.ip = '192.168.118.68'
         self.port = 9090
@@ -43,7 +42,6 @@ class Server():
                 logging.critical("Причина: " + str(err))
                 self.runsocket = False
 
-
     def LoadSqlRequests(self):
         # Загрузка sql файлов в словарь для удобного выполнения запросов,
         # например Connections['EAM_Iplast'].execute(requests['GetTpaCards'])
@@ -58,14 +56,13 @@ class Server():
             file = open(dir+"\\"+SQLfile, encoding='utf-8')
             text = file.read().split("\n")
             for word in text:
-                sql = sql +" "+word
+                sql = sql + " "+word
             self.requests[SQLfile[:-4]] = sql
             logging.info(SQLfile + " загружен.")
 
-
     def AcceptClients(self):
         # Принятие входящих подключений
-        # Если подключился новый клиент, то создаётся новый поток 
+        # Если подключился новый клиент, то создаётся новый поток
         # в котором обрабатывается клиент
         self.worksthreads['AcceptClients'] = True
         self.serverstatus = "Сервер запущен"
@@ -77,23 +74,25 @@ class Server():
                 self.serverstatus = "Подключен новый клиент"
                 if(self.clients.count(addr) == 0):
                     logging.info("Подключен новый клиент:" + str(addr))
-                    logging.info("Создание потока для обработки клиента:" + str(addr))
+                    logging.info(
+                        "Создание потока для обработки клиента:" + str(addr))
                     self.serverstatus = "Создание потока"
-                    start_new_thread(self.ListenClient,(conn,addr ))
-                    logging.info("Поток обработки клиента " + str(addr) + " создан.")                   
-            except:               
+                    start_new_thread(self.ListenClient, (conn, addr))
+                    logging.info("Поток обработки клиента " +
+                                 str(addr) + " создан.")
+            except:
                 self.worksthreads['AcceptClients'] = False
                 break
         self.worksthreads['AcceptClients'] = False
 
-    def ListenClient(self,client,addr):
+    def ListenClient(self, client, addr):
         self.client_sockets.append(client)
         self.worksthreads[str(addr)] = True
         Manupulator = None
         try:
-            # Создаём SQL подключение для клиента, в случае сбоя 
-            # отправим сообщение с ошибкой и завершим поток     
-            self.clients.append(addr)    
+            # Создаём SQL подключение для клиента, в случае сбоя
+            # отправим сообщение с ошибкой и завершим поток
+            self.clients.append(addr)
             connection = None
             Connections = {}
             for Base in self.ConnectionsStrings:
@@ -107,25 +106,25 @@ class Server():
                     SQLError["SQLError"] = "Сбой в подключении к SQL серверу"
                     SQLError = pickle.dumps(SQLError)
                     size = len(SQLError)
-                    size4bytes = struct.pack("I",size)
+                    size4bytes = struct.pack("I", size)
                     client.send(size4bytes)
                     client.send(SQLError)
                     self.worksthreads[str(addr)] = False
                     return
 
-            Manupulator =  DataManipulator(Connections, self.requests)
+            Manupulator = DataManipulator(Connections, self.requests)
 
             # Добавляем клиента в список клиентов
             # и отправляем первичные данные: Карточки по ТПА и список Id считывателей
             TpaCards = pickle.dumps(Manupulator.GetTpaCards('FirstConnection'))
             size = len(TpaCards)
-            size4bytes = struct.pack("I",size)
+            size4bytes = struct.pack("I", size)
             client.send(size4bytes)
             client.send(TpaCards)
 
             TpaReaderList = pickle.dumps(Manupulator.GetReaderIdsList())
             size = len(TpaReaderList)
-            size4bytes = struct.pack("I",size)
+            size4bytes = struct.pack("I", size)
             client.send(size4bytes)
             client.send(TpaReaderList)
         except:
@@ -140,58 +139,67 @@ class Server():
                 if data:
                     client_answer = pickle.loads(data)
                     #Если данные ввиде строки
-                    if(isinstance(client_answer,str)):
+                    if(isinstance(client_answer, str)):
                         # Отправляем данные для обновления списка ТПА
                         if (client_answer == 'NeedUpdate'):
-                            UpdatedTPAlist = pickle.dumps(Manupulator.GetTpaCards(client_answer))
-                            logging.info("Данные от клиента: " + str(addr) + "--> " + str(client_answer)) 
+                            UpdatedTPAlist = pickle.dumps(
+                                Manupulator.GetTpaCards(client_answer))
+                            logging.info("Данные от клиента: " +
+                                         str(addr) + "--> " + str(client_answer))
                             size = len(UpdatedTPAlist)
-                            size4bytes = struct.pack("I",size)
+                            size4bytes = struct.pack("I", size)
                             client.send(size4bytes)
                             client.send(UpdatedTPAlist)
 
                         # Если клиент вышел, удаляем его из списка и завершаем поток
                         if (client_answer == 'exit'):
-                            logging.info("Клиент: " + str(addr) + " --> отключился")
+                            logging.info("Клиент: " + str(addr) +
+                                         " --> отключился")
                             self.clients.remove(addr)
                             self.worksthreads[str(addr)] = False
                             return
 
                     #Если данные виде словаря
-                    elif (isinstance(client_answer,dict)):
+                    elif (isinstance(client_answer, dict)):
                         #Отправка клиету данных для графика по ТПА
                         if (list(client_answer.keys())[0] == "NeedTpaDatePoints"):
-                            logging.info("Данные от клиента: " + str(addr) + "--> " + str(client_answer["NeedTpaDatePoints"]))
-                            graphicdata = pickle.dumps(Manupulator.GetTpaGraphPoints(client_answer["NeedTpaDatePoints"],datetime.now()))
+                            logging.info("Данные от клиента: " + str(addr) +
+                                         "--> " + str(client_answer["NeedTpaDatePoints"]))
+                            graphicdata = pickle.dumps(Manupulator.GetTpaGraphPoints(
+                                client_answer["NeedTpaDatePoints"], datetime.now()))
                             size = len(graphicdata)
-                            size4bytes = struct.pack("I",size)
+                            size4bytes = struct.pack("I", size)
                             client.send(size4bytes)
                             client.send(graphicdata)
-                        
+
                         if (list(client_answer.keys())[0] == "NeedGraphHistoryPoint"):
-                            logging.info("Данные от клиента: " + str(addr) + "--> " + str("NeedGraphHistoryPoint"))
+                            logging.info(
+                                "Данные от клиента: " + str(addr) + "--> " + str("NeedGraphHistoryPoint"))
                             graphicdata = pickle.dumps(Manupulator.TestGetGraphHistory(client_answer["NeedGraphHistoryPoint"]["ReaderOid"],
-                                                                                        client_answer["NeedGraphHistoryPoint"]["StartDate"],
-                                                                                        client_answer["NeedGraphHistoryPoint"]["EndDate"]))
+                                                                                       client_answer["NeedGraphHistoryPoint"]["StartDate"],
+                                                                                       client_answer["NeedGraphHistoryPoint"]["EndDate"]))
                             size = len(graphicdata)
-                            size4bytes = struct.pack("I",size)
+                            size4bytes = struct.pack("I", size)
                             client.send(size4bytes)
                             client.send(graphicdata)
-                        
+
                         if(list(client_answer.keys())[0] == "NeedTpaIdle"):
-                            logging.info("Данные от клиента: " + str(addr) + "--> " + str("NeedTpaIdle"))
-                            idlelist = pickle.dumps(Manupulator.GetTpaIdle(client_answer["NeedTpaIdle"],None))
+                            logging.info("Данные от клиента: " +
+                                         str(addr) + "--> " + str("NeedTpaIdle"))
+                            idlelist = pickle.dumps(Manupulator.GetTpaIdle(
+                                client_answer["NeedTpaIdle"], None))
                             size = len(idlelist)
-                            size4bytes = struct.pack("I",size)
+                            size4bytes = struct.pack("I", size)
                             client.send(size4bytes)
                             client.send(idlelist)
-                        
+
                         if(list(client_answer.keys())[0] == "NeedHistoryIdles"):
-                            logging.info("Данные от клиента: " + str(addr) + "--> " + str("NeedHistoryIdles"))
+                            logging.info(
+                                "Данные от клиента: " + str(addr) + "--> " + str("NeedHistoryIdles"))
                             idlelist = pickle.dumps(Manupulator.GetTpaIdle(client_answer["NeedHistoryIdles"]["ReaderOid"],
-                                                                        client_answer["NeedHistoryIdles"]["StartDate"]))
+                                                                           client_answer["NeedHistoryIdles"]["StartDate"]))
                             size = len(idlelist)
-                            size4bytes = struct.pack("I",size)
+                            size4bytes = struct.pack("I", size)
                             client.send(size4bytes)
                             client.send(idlelist)
             except:
@@ -202,7 +210,6 @@ class Server():
                 self.worksthreads[str(addr)] = False
                 return
         self.worksthreads[str(addr)] = False
-
 
     def ServerRun(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

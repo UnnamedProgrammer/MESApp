@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import logging
 import pyodbc
 
+
 class DataManipulator():
     def __init__(self, Connections, requests):
         self.Connections = Connections
@@ -44,11 +45,11 @@ class DataManipulator():
         for tpadata in self.tpa_Oids:
             if (tpadata[3] != None):
                 Tpa_cards_data[tpadata[1]] = [tpadata[1],
-                               tpadata[2], 'В работе', tpadata[3]]
+                                              tpadata[2], 'В работе', tpadata[3]]
             else:
                 Tpa_cards_data[tpadata[1]] = [tpadata[1],
-                               tpadata[2], 'В работе', "None"]
-                                          
+                                              tpadata[2], 'В работе', "None"]
+
         self.Connections['EAM_test'].execute(self.requests['GetTpaIdle'])
         IdleTpaList = self.Connections['EAM_test'].fetchall()
         for idle in IdleTpaList:
@@ -336,14 +337,15 @@ class DataManipulator():
         return packet
 
     # Запрос вытаскивающий простои ТПА, введенный вес, и распоряжения
-    def GetTpaIdle(self,repobj,date):
+    def GetTpaIdle(self, repobj, date):
         logging.info("SQLManipulator -> GetTpaIdle")
         try:
-            editresult = {'TpaIdleList': {},'EnteredWeight': {},'ShiftTask': {}}
+            editresult = {'TpaIdleList': {},
+                          'EnteredWeight': {}, 'ShiftTask': {}}
             nightshift = False
-            if(isinstance(date,str)):
-                checkdate = datetime.strptime(date,"%Y-%m-%d %H:%M:%S")
-            else: 
+            if(isinstance(date, str)):
+                checkdate = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+            else:
                 checkdate = date
             if(date != None):
                 # Проверка на времени смены (дневная, ночная)
@@ -359,7 +361,7 @@ class DataManipulator():
                     date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 else:
                     nightshift = True
-            
+
             if(nightshift == False):
                 query = f''' 
                     SELECT [MESIdleJournal].[Oid]
@@ -430,13 +432,13 @@ class DataManipulator():
                         'start': idle[2],
                         'end': idle[3]
                     }
-            EnteredWeight = self.GetTpaWeight(repobj,date)
+            EnteredWeight = self.GetTpaWeight(repobj, date)
             i = 0
-            if(EnteredWeight != [] and EnteredWeight != None ):
+            if(EnteredWeight != [] and EnteredWeight != None):
                 for weight in EnteredWeight:
-                    if(weight[0] == None and 
-                    weight[1] == None and 
-                    weight[2] == None):
+                    if(weight[0] == None and
+                       weight[1] == None and
+                       weight[2] == None):
                         continue
                     editresult['EnteredWeight'][i] = {
                         'weight': weight[0],
@@ -445,13 +447,13 @@ class DataManipulator():
                     }
                     i += 1
 
-            ShiftTasks = self.ShiftTask(repobj,date)
+            ShiftTasks = self.ShiftTask(repobj, date)
             i = 0
             if(ShiftTasks != []):
                 for task in ShiftTasks:
-                    if(task[0] == None and 
-                    task[1] == None and 
-                    task[2] == None):
+                    if(task[0] == None and
+                       task[1] == None and
+                       task[2] == None):
                         continue
                     editresult['ShiftTask'][i] = {
                         'name': task[0],
@@ -465,13 +467,13 @@ class DataManipulator():
         return editresult
 
     # Метод для вытаскивания введенного веса ТПА
-    def GetTpaWeight(self,repobj,date):
+    def GetTpaWeight(self, repobj, date):
         logging.info("SQLManipulator -> GetTpaWeight")
         # Проверка на времени смены (дневная, ночная)
         result = None
-        if(isinstance(date,str)):
-            checkdate = datetime.strptime(date,"%Y-%m-%d %H:%M:%S")
-        else: 
+        if(isinstance(date, str)):
+            checkdate = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+        else:
             checkdate = date
         date = checkdate.strftime("%Y-%m-%d %H:%M:%S")
         query = f''' 
@@ -512,13 +514,13 @@ class DataManipulator():
         self.Connections['EAM_test'].execute(query)
         result = self.Connections['EAM_test'].fetchall()
         return result
-    
-    def ShiftTask(self,repobj,date: datetime):
+
+    def ShiftTask(self, repobj, date: datetime):
         logging.info("SQLManipulator -> ShiftTask")
         nightshift = False
-        if(isinstance(date,str)):
-            checkdate = datetime.strptime(date,"%Y-%m-%d %H:%M:%S")
-        else: 
+        if(isinstance(date, str)):
+            checkdate = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+        else:
             checkdate = date
         if(date != None):
             # Проверка на времени смены (дневная, ночная)
@@ -587,7 +589,7 @@ class DataManipulator():
             '''
             self.Connections['EAM_test'].execute(query)
             result = self.Connections['EAM_test'].fetchall()
-            date = datetime.strptime(date,"%Y-%m-%d") + timedelta(days=1)
+            date = datetime.strptime(date, "%Y-%m-%d") + timedelta(days=1)
             date = date.strftime("%Y-%m-%d")
             query2 = f'''
                 SELECT JRAB.[Наименование], RAS.[НачалоПлан],RAS.[ОкончаниеПлан]
