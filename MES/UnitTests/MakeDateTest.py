@@ -13,7 +13,6 @@ def makedate(start, end):
     while(startd != endd):
         datelist.append(startd)
         startd = startd + timedelta(minutes=1)
-        print(startd)
     return datelist
 
 makedate("19:00","7:00")

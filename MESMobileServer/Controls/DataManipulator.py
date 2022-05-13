@@ -8,7 +8,6 @@ class DataManipulator():
         self.requests = requests
         self.label_oids = []
         self.tpa_Oids = []
-        self.pressforms = []
         self.production_fact_and_plans = []
         self.packet = {}
         self.startdate = datetime(
@@ -31,39 +30,8 @@ class DataManipulator():
         self.tpa_Oids = query_result
         readers_oids = []
         buffer = []
-
         for i in self.tpa_Oids:
             readers_oids.append(i[0])
-        for Oid in readers_oids:
-            self.Connections['EAM_test'].execute("SELECT TOP (1) [Label] FROM [EAM_test].[dbo].[RFIDData]" +
-                                                 " WHERE Reader = '"+Oid+"'" +
-                                                 "ORDER BY Date DESC")
-            buffer.append(self.Connections['EAM_test'].fetchone())
-        for i in range(0, len(buffer)):
-            self.label_oids.append(buffer[i][0])
-
-        buffer = []
-        for Oid in self.label_oids:
-            self.Connections['EAM_test'].execute("SELECT TOP (1) [Asset] FROM [EAM_test].[dbo].[RFIDLabel] " +
-                                                 "WHERE Oid LIKE '"+Oid+"'")
-            buffer.append(self.Connections['EAM_test'].fetchone())
-        self.label_oids = []
-        for i in range(0, len(buffer)):
-            self.label_oids.append(buffer[i][0])
-
-        buffer = []
-        for Oid in self.label_oids:
-            if (Oid != None):
-                self.Connections['EAM_test'].execute("SELECT TOP (1) [Наименование] FROM [EAM_test].[dbo].[ОбъектРемонта]" +
-                                                     " WHERE Oid LIKE '"+Oid+"'")
-                buffer.append(self.Connections['EAM_test'].fetchone())
-            else:
-                buffer.append(None)
-        for pfname in buffer:
-            try:
-                self.pressforms.append(pfname[0])
-            except:
-                self.pressforms.append('None')
 
         self.Connections['EAM_test'].execute(
             self.requests['GetProductionPlans'])
@@ -73,11 +41,14 @@ class DataManipulator():
 
         Tpa_cards_data = {}
 
-        i = 0
         for tpadata in self.tpa_Oids:
-            Tpa_cards_data[tpadata[1]] = [tpadata[1],
-                                          tpadata[2], 'В работе', self.pressforms[i]]
-            i = i + 1
+            if (tpadata[3] != None):
+                Tpa_cards_data[tpadata[1]] = [tpadata[1],
+                               tpadata[2], 'В работе', tpadata[3]]
+            else:
+                Tpa_cards_data[tpadata[1]] = [tpadata[1],
+                               tpadata[2], 'В работе', "None"]
+                                          
         self.Connections['EAM_test'].execute(self.requests['GetTpaIdle'])
         IdleTpaList = self.Connections['EAM_test'].fetchall()
         for idle in IdleTpaList:
@@ -137,7 +108,6 @@ class DataManipulator():
 
         self.label_oids = []
         self.tpa_Oids = []
-        self.pressforms = []
         self.production_fact_and_plans = []
         self.packet = {}
 
@@ -316,109 +286,53 @@ class DataManipulator():
                 strdate = datepoint[0].strftime("%H:%M")
                 datepoints.append(strdate)
 
-        if(NightShift == False):
-            self.Connections['EAM_test'].execute(f'''
-                                SELECT	((COUNT([Status]) / 2) * [SocketsCount]) AS Продукт_за_смену,
-                                        [EAM_Iplast].[dbo].[ОбъектРемонта].[Наименование] as ТПА,
-                                        SUM(DISTINCT [ProductionPlan]) AS План,
-                                        [CycleNorm],
-                                        [WeightNorm]
-                                FROM [EAM_test].[dbo].[RFIDData],
-                                        [EAM_test].[dbo].[RFIDReader],
-                                        [EAM_Iplast].[dbo].[ОбъектРемонта],
-                                        [EAM_test].[dbo].[MESShiftTaskData]
-                                WHERE
-                                    DATENAME(HOUR, [Date]) >= 7 AND 
-                                    DATENAME(HOUR, [Date]) <= 19 AND 
-                                    DATENAME(YEAR, [Date]) = DATENAME(YEAR, '{datestart}') AND
-                                    DATENAME(MONTH, [Date]) = DATENAME(MONTH, '{datestart}') AND
-                                    DATENAME(DAY, [Date]) = DATENAME(DAY, '{datestart}') AND 
-                                    Reader = RFIDReader.Oid  AND
-                                    [EAM_test].[dbo].[RFIDReader].Active > 0 AND
-                                    [EAM_Iplast].[dbo].[ОбъектРемонта].Oid = [EAM_test].[dbo].[RFIDReader].Asset AND
-                                    [EAM_test].[dbo].[MESShiftTaskData].[RepairObject] = [EAM_test].[dbo].[RFIDReader].Asset AND
-                                    DATENAME(HOUR, [ProductionStart]) = {datestart.hour} AND 
-                                    DATENAME(YEAR, [ProductionStart]) = DATENAME(YEAR, '{datestart}') AND
-                                    DATENAME(MONTH, [ProductionStart]) = DATENAME(MONTH, '{datestart}') AND
-                                    DATENAME(DAY, [ProductionStart]) = DATENAME(DAY, '{datestart}') 
-                                GROUP BY [EAM_Iplast].[dbo].[ОбъектРемонта].[Наименование], [SocketsCount], [CycleNorm], [WeightNorm]
-                                ORDER BY [EAM_Iplast].[dbo].[ОбъектРемонта].[Наименование] ASC 
-                                ''')
-            plans = self.Connections['EAM_test'].fetchall()
-            dict_plans = {}
-            for plan in plans:
-                dict_plans[plan[1]] = {"count": plan[0], "plan": plan[2]}
-            packet["HistoryDatePoints"] = datepoints
-            packet["Plan"] = dict_plans
-        else:
-            self.Connections['EAM_test'].execute(f'''
-                                SELECT	((COUNT([Status]) / 2) * [SocketsCount]) AS Продукт_за_смену,
-                                        [EAM_Iplast].[dbo].[ОбъектРемонта].[Наименование] as ТПА,
-                                        SUM(DISTINCT [ProductionPlan]) AS План,
-                                        [CycleNorm],
-                                        [WeightNorm]
-                                FROM [EAM_test].[dbo].[RFIDData],
-                                        [EAM_test].[dbo].[RFIDReader],
-                                        [EAM_Iplast].[dbo].[ОбъектРемонта],
-                                        [EAM_test].[dbo].[MESShiftTaskData]
-                                WHERE
-                                    DATENAME(HOUR, [Date]) >= 19 AND 
-                                    DATENAME(HOUR, [Date]) <= 23 AND 
-                                    DATENAME(YEAR, [Date]) = DATENAME(YEAR, '{datestart}') AND
-                                    DATENAME(MONTH, [Date]) = DATENAME(MONTH, '{datestart}') AND
-                                    DATENAME(DAY, [Date]) = DATENAME(DAY, '{datestart}') AND 
-                                    Reader = RFIDReader.Oid  AND
-                                    [EAM_test].[dbo].[RFIDReader].Active > 0 AND
-                                    [EAM_Iplast].[dbo].[ОбъектРемонта].Oid = [EAM_test].[dbo].[RFIDReader].Asset AND
-                                    [EAM_test].[dbo].[MESShiftTaskData].[RepairObject] = [EAM_test].[dbo].[RFIDReader].Asset AND
-                                    DATENAME(HOUR, [ProductionStart]) = {datestart.hour} AND 
-                                    DATENAME(YEAR, [ProductionStart]) = DATENAME(YEAR, '{datestart}') AND
-                                    DATENAME(MONTH, [ProductionStart]) = DATENAME(MONTH, '{datestart}') AND
-                                    DATENAME(DAY, [ProductionStart]) = DATENAME(DAY, '{datestart}') 
-                                GROUP BY [EAM_Iplast].[dbo].[ОбъектРемонта].[Наименование], [SocketsCount], [CycleNorm], [WeightNorm]
-                                ORDER BY [EAM_Iplast].[dbo].[ОбъектРемонта].[Наименование] ASC 
-                                ''')
-            plans = self.Connections['EAM_test'].fetchall()
-            dict_plans = {}
-            for plan in plans:
-                dict_plans[plan[1]] = {"count": plan[0], "plan": plan[2]}
-
-            self.Connections['EAM_test'].execute(f'''
-                                SELECT	((COUNT([Status]) / 2) * [SocketsCount]) AS Продукт_за_смену,
-                                        [EAM_Iplast].[dbo].[ОбъектРемонта].[Наименование] as ТПА,
-                                        SUM(DISTINCT [ProductionPlan]) AS План,
-                                        [CycleNorm],
-                                        [WeightNorm]
-                                FROM [EAM_test].[dbo].[RFIDData],
-                                        [EAM_test].[dbo].[RFIDReader],
-                                        [EAM_Iplast].[dbo].[ОбъектРемонта],
-                                        [EAM_test].[dbo].[MESShiftTaskData]
-                                WHERE
-                                    DATENAME(HOUR, [Date]) >= 0 AND 
-                                    DATENAME(HOUR, [Date]) <= 7 AND 
-                                    DATENAME(YEAR, [Date]) = DATENAME(YEAR, '{datestart}') AND
-                                    DATENAME(MONTH, [Date]) = DATENAME(MONTH, '{datestart}') AND
-                                    DATENAME(DAY, [Date]) = DATENAME(DAY, '{datestart}') AND 
-                                    Reader = RFIDReader.Oid  AND
-                                    [EAM_test].[dbo].[RFIDReader].Active > 0 AND
-                                    [EAM_Iplast].[dbo].[ОбъектРемонта].Oid = [EAM_test].[dbo].[RFIDReader].Asset AND
-                                    [EAM_test].[dbo].[MESShiftTaskData].[RepairObject] = [EAM_test].[dbo].[RFIDReader].Asset AND
-                                    DATENAME(HOUR, [ProductionStart]) = {datestart.hour} AND 
-                                    DATENAME(YEAR, [ProductionStart]) = DATENAME(YEAR, '{datestart}') AND
-                                    DATENAME(MONTH, [ProductionStart]) = DATENAME(MONTH, '{datestart}') AND
-                                    DATENAME(DAY, [ProductionStart]) = DATENAME(DAY, '{datestart}') 
-                                GROUP BY [EAM_Iplast].[dbo].[ОбъектРемонта].[Наименование], [SocketsCount], [CycleNorm], [WeightNorm]
-                                ORDER BY [EAM_Iplast].[dbo].[ОбъектРемонта].[Наименование] ASC 
-                                ''')
-            plans = self.Connections['EAM_test'].fetchall()
-            for plan in plans:
-                try:
-                    dict_plans[plan[1]]["count"] += plan[0]
-                except:
-                    continue
-            packet["HistoryDatePoints"] = datepoints
-            packet["Plan"] = dict_plans
-
+        date = datestart.strftime("%Y-%m-%d %H:%M:%S")
+        self.Connections['EAM_test'].execute(f'''
+                            DECLARE @now datetime,  @morning datetime, @taskdate datetime, @night datetime, @shifttype int;                                                                      
+                            SET @now = CONVERT(datetime2,'{date}');
+                            SET @morning = DATEADD( hour, 7, DATEDIFF( dd, 0, @now ) );
+                            SET @night = DATEADD( hour, 19, DATEDIFF( dd, 0, @now ) );
+                                                                    
+                            IF @now >= @morning AND @now <= @night
+                                SET @shifttype = 0;
+                            ELSE 
+                                SET @shifttype = 1;
+                                                                    
+                            IF @now >= @morning
+                                SET @taskdate = CAST( @now AS date );
+                            ELSE 
+                                SET @taskdate = DATEADD(DAY, -1, CAST( @now AS date ));
+                                                                                
+                            SELECT
+                                (COUNT(RFDD.[Status]) / 2) * [SocketsCount] AS Продукт_за_смену,
+                                OBR.[Наименование] AS ТПА,
+                                STD.ProductionPlan AS План,
+                                STD.CycleNorm,
+                                STD.WeightNorm
+                            FROM [EAM_test].[dbo].[MESShiftTask] AS ST
+                                LEFT JOIN [EAM_test].[dbo].[MESShiftTaskData] AS STD ON STD.[ShiftTask] = ST.[Oid]
+                                LEFT JOIN [EAM_Iplast].[dbo].[ОбъектРемонта]  AS [OBR] ON STD.[RepairObject] = OBR.[Oid]
+                                LEFT JOIN [EAM_test].[dbo].[RFIDReader] AS RFDR ON RFDR.Asset = RepairObject
+                                LEFT JOIN [EAM_test].[dbo].[RFIDData] AS RFDD ON RFDD.Reader = RFDR.Oid
+                            WHERE ST.[TaskDate] = @taskdate 
+                                AND RFDR.Active = 1
+                                AND ST.[ShiftType] = @shifttype
+                                AND STD.[TaskStatus] IS NOT NULL AND
+                                DATENAME(HOUR, RFDD.[Date]) >= CAST(DATENAME(HOUR, STD.ProductionStart) AS INT) AND 
+                                DATENAME(HOUR, RFDD.[Date]) <= CAST(DATENAME(HOUR, STD.ProductionEnd) AS INT) AND 
+                                DATENAME(YEAR, RFDD.[Date]) = DATENAME(YEAR, STD.ProductionStart) AND
+                                DATENAME(MONTH, RFDD.[Date]) = DATENAME(MONTH, STD.ProductionStart) AND
+                                DATENAME(DAY, RFDD.[Date]) = DATENAME(DAY, STD.ProductionStart)
+                            GROUP BY OBR.[Наименование],[STD].SocketsCount,STD.ProductionPlan,STD.CycleNorm,STD.WeightNorm,	STD.ProductionStart,STD.ProductionEnd
+                            ORDER BY Наименование ASC
+                            ''')
+        plans = self.Connections['EAM_test'].fetchall()
+        dict_plans = {}
+        for plan in plans:
+            dict_plans[plan[1]] = {"count": plan[0], "plan": plan[2]}
+        packet["HistoryDatePoints"] = datepoints
+        packet["Plan"] = dict_plans
+        print(packet["Plan"])
         return packet
 
     # Запрос вытаскивающий простои ТПА, введенный вес, и распоряжения
@@ -546,7 +460,7 @@ class DataManipulator():
                     }
                     i += 1
         except pyodbc.Error as e:
-            print(e)
+            logging.CRITICAL(e)
             return
         return editresult
 

@@ -36,11 +36,11 @@
                     RecycleBoxLayout:
                         id: tpa_list
                         orientation: 'vertical'
-                        default_size: None, dp(180)
+                        default_size: None, dp(200)
                         default_size_hint: 1, None
                         size_hint_y: None
                         height: self.minimum_height
-                        padding: dp(5),dp(5),dp(5),dp(5)
+                        padding: dp(5),0,dp(5),dp(5)
                         spacing: 5
 
             SecondWindow:
@@ -194,6 +194,7 @@
                                             width: dp(200)
                                             height: dp(30)
                                         MDChip:
+                                            id: srweight
                                             text: '0'
                                             icon: ''
                                             color: app.get_color("#28a745")
@@ -259,15 +260,18 @@
     orientation: "vertical"
     padding: dp(5),dp(5),dp(0),dp(5)
     ripple_behavior: True
-    MDBoxLayout:
-        orientation: 'vertical'
-        spacing: dp(10)
-        padding: dp(15),dp(0),dp(15),dp(0)
+    on_release: app.SelectDetailScreen(root.name,root.productsPlan,root.products,root.cyclenorm,root.averagecycle,root.weightnorm)
+    spacing: dp(25)
+    AnchorLayout:
+        padding: dp(15),dp(0),dp(15),dp(0) 
+        anchor_y:"top"
         OneLineIconListItem:
             text: root.name
-            on_press: app.SelectDetailScreen(root.name,root.productsPlan,root.products,root.cyclenorm,root.averagecycle,root.weightnorm)
             IconLeftWidget:
-                icon: "asterisk"
+                icon: "asterisk" 
+    MDBoxLayout:
+        spacing: dp(10)
+        padding: dp(15),dp(0),dp(15),dp(0)
         MDLabel:
             text:"ПФ: " + root.installedPf + "\n" + "Техсостояние EAM: " + root.techstateEam + "\n" +"Техсостояние MES: " + root.techstateTerminal + "\n" +"План: " + root.productsPlan + "\n" +"Продукт за смену: " + root.products
             adaptive_height: True

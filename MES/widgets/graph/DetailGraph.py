@@ -25,7 +25,7 @@ class DetailGraph(MDBoxLayout):
         self.oldEndTime = None
 
     # Метод построения графика статистики по машине
-    def LoadGraph(self, datepointsdict, productplan, productfact):
+    def LoadGraph(self, datepointsdict, productplan, productfact,machinename):
         self.clear_widgets()
         productpoints = []
         self.productfact = productfact
@@ -75,15 +75,18 @@ class DetailGraph(MDBoxLayout):
                            "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00"]
 
             ax.set_xticklabels(xlabels, rotation=45)
-
+            plt.title(machinename,fontsize=dp(8))
             #Установка шага для осей
-            plt.yticks(np.arange(0, int(productplan), int(productplan)/12))
+            arrlim = [0]
+            for i in range(1,13):
+                arrlim.append(arrlim[i-1] + int(productplan)/12)
+            plt.yticks(arrlim)
             plt.fill_between(self.makedate(dt.datetime.strftime(dt.datetime.now(), "%H:%M"), "19:00"), int(
-                productplan), np.zeros_like(int(productplan)), color='#679FD2')
+                productplan), np.zeros_like(int(productplan)), color='#CFE8FE')
 
         #Формирование графика
         if(datepoints != []):
-            plt.plot(self.xpoints, self.ypoints, color="#408DD2", linewidth=dp(2))
+            plt.plot(self.xpoints, self.ypoints, color="#408DD2", linewidth=dp(1))
             plt.plot(self.xfactpoints, self.yfactpoints,
                     color="#28A745", linewidth=dp(2))
             self.diff = self.getDiff()
@@ -93,7 +96,7 @@ class DetailGraph(MDBoxLayout):
         plt.close(fig)
 
     # Метод формирования графика за прошлые смены
-    def LoadGraphHistory(self, enddate, startdate, points, plan):
+    def LoadGraphHistory(self, enddate, startdate, points, plan, machinename):
         self.clear_widgets()
         formatter = dates.DateFormatter('%H:%M')
         fig, ax = plt.subplots()
@@ -151,13 +154,19 @@ class DetailGraph(MDBoxLayout):
                         dt.datetime.strptime("7:00", "%H:%M") + timedelta(days=1)])
             xlabels = ["19:00", "20:00", "21:00", "22:00", "23:00", "00:00",
                        "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00"]
+
+        plt.title(machinename,fontsize=dp(8))
         #Установка шага для оси Y
-        plt.yticks(np.arange(0, int(plan), int(plan)/12))
+        arrlim = [0]
+        for i in range(1,13):
+            arrlim.append(arrlim[i-1] + int(plan)/12)
+        plt.yticks(arrlim)
 
         #Формирование графика
-        plt.plot(self.xpoints, self.ypoints, color="#408DD2", linewidth=dp(2))
+        plt.plot(self.xpoints, self.ypoints, color="#408DD2", linewidth=dp(1))
         plt.plot(self.xfactpoints, self.yfactpoints,
                  color="#28A745", linewidth=dp(2))
+
         ax.set_xticklabels(xlabels, rotation=45)
         graph = FigureCanvasKivyAgg(plt.gcf())
         self.add_widget(graph)
@@ -188,7 +197,8 @@ class DetailGraph(MDBoxLayout):
             i = i + 1
             if point == datenowd:
                 break
-
+        print(self.productfact)
+        print(self.ypoints[i])
         return str(int(math.floor(float(self.productfact) - float(self.ypoints[i]))))
 
     # Вычисление поля "До конца плана"

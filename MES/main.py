@@ -62,6 +62,7 @@ class MES(MDApp):
         self.enddate = None
         self.startdate = None
         self.escapebuttoncreated = False
+        self.installedPressForms = {}
     def get_color(self, hex):
         log.info("Задействована функция get_color")
         return get_color_from_hex(hex)
@@ -311,6 +312,7 @@ class MES(MDApp):
         LEamColor = (0, 0, 0, 1)
         LMesColor = (0, 0, 0, 1)
         self.rvdata = []
+
         for tpa in tpas:
             # Устанавливается цвет карточки
             if (tpas[tpa][1] == "В работе" and tpas[tpa][2] == "В работе"):
@@ -341,6 +343,7 @@ class MES(MDApp):
                                 'weightnorm': str(float(tpas[tpa][7])),
                                 'averagecycle': tpas[tpa][8]
                                 })
+            self.installedPressForms[tpas[tpa][0]] = tpas[tpa][3]
         self.ApplyTpaUpdate()
 
     #Метод запускающий поток обновления карточек
@@ -434,7 +437,7 @@ class MES(MDApp):
         self.root.ids.weightnorm.text = str(self.weightnorm)
         self.root.ids.detailgraph.clear_widgets()
         self.root.ids.detailgraph.LoadGraph(
-            datepoints, self.TakeProductsPlanForTpaDetail, self.TakeProductFact)
+            datepoints, self.TakeProductsPlanForTpaDetail, self.TakeProductFact,self.installedPressForms[self.root.ids.toolbar.title])
         self.root.ids.diffprod.text = str(self.root.ids.detailgraph.diff)
         self.root.ids.endtime.text = self.root.ids.detailgraph.TimeToEndPlan
         log.info("График отрисован")
@@ -483,7 +486,7 @@ class MES(MDApp):
     @mainthread
     def AddHistoryGraphFromServer(self,points,plan):
         log.info("Вывод графика за прошлую смену")
-        self.root.ids.detailgraph.LoadGraphHistory(self.enddate, self.startdate,points,plan)
+        self.root.ids.detailgraph.LoadGraphHistory(self.enddate, self.startdate,points,plan,self.installedPressForms[self.root.ids.toolbar.title])
         self.root.ids.date_pick.text = "Дата: " + str(self.startdate)
 
     #Метод вывода информации об ошибке
@@ -586,16 +589,20 @@ class MES(MDApp):
     def LoadEnteredWeight(self,weightlist):
         log.info("Загрузка введенного веса")
         weightcount = 0
+        srweight = 0
         tablerowdata = []
         for weight in list(weightlist['EnteredWeight'].keys()):
             row = (weightlist['EnteredWeight'][weightcount]['weight'],
                    weightlist['EnteredWeight'][weightcount]['date'],
                    weightlist['EnteredWeight'][weightcount]['creator']
                    )
+            srweight +=float(weightlist['EnteredWeight'][weightcount]['weight'])
             weightcount += 1
             tablerowdata.append(row)
+        if(weightcount != 0):
+            srweight = round(srweight/weightcount,2)
         self.root.ids.enteredweight.text = "Введенный вес: "+str(weightcount)
-
+        self.root.ids.srweight.text = str(srweight)
         self.root.ids.enteredweightlist.clear_widgets()
         layout = MDBoxLayout()
         DataTable = MDDataTable(size_hint=(1, 1),
@@ -603,7 +610,7 @@ class MES(MDApp):
                                 column_data=[
                                     ("Вес", dp(35)),
                                     ("Время", dp(35)),
-                                    ("Оператор", dp(30))
+                                    ("Оператор", dp(50))
                                     ],
                                 row_data=tablerowdata
                             )
@@ -614,7 +621,6 @@ class MES(MDApp):
     @mainthread
     def LoadShiftTask(self,ShiftTaskList):
         log.info("Загрузка распоряжений")
-        print(ShiftTaskList)
         taskcount = 0
         tablerowdata = []
         for weight in list(ShiftTaskList['ShiftTask'].keys()):
