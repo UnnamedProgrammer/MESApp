@@ -333,7 +333,6 @@ class DataManipulator():
             dict_plans[plan[1]] = {"count": plan[0], "plan": plan[2]}
         packet["HistoryDatePoints"] = datepoints
         packet["Plan"] = dict_plans
-        print(packet["Plan"])
         return packet
 
     # Запрос вытаскивающий простои ТПА, введенный вес, и распоряжения

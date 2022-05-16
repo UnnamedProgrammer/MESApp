@@ -198,8 +198,6 @@ class DetailGraph(MDBoxLayout):
             i = i + 1
             if point == datenowd:
                 break
-        print(self.productfact)
-        print(self.ypoints[i])
         return str(int(math.floor(float(self.productfact) - float(self.ypoints[i]))))
 
     # Вычисление поля "До конца плана"

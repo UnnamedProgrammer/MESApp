@@ -1,3 +1,9 @@
+from kivy.config import Config
+
+Config.set('graphics', 'width', '300')
+Config.set('graphics', 'height', '500')
+Config.set('graphics', 'resizable', False)
+
 from kivymd.uix.list import OneLineIconListItem, IconLeftWidget
 import time
 import socket
@@ -8,7 +14,6 @@ from _thread import *
 from kivymd.app import MDApp
 from Controls.Server import Server
 from threading import main_thread
-from kivy.config import Config
 from concurrent.futures import thread
 import os
 import logging
@@ -36,9 +41,6 @@ logging.basicConfig(
     datefmt='%H:%M:%S'
 )
 
-Config.set('graphics', 'width', '300')
-Config.set('graphics', 'height', '500')
-Config.set('graphics', 'resizable', False)
 
 
 KV = '''
