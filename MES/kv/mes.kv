@@ -15,6 +15,7 @@
         MESScreenManager:
             id: manager
             LoadingWindow:
+                md_bg_color: app.get_color("#ffffff")
                 MDSpinner:
                     id: load_spin
                     size_hint: None, None
@@ -28,7 +29,7 @@
                     pos_hint: {'center_x': 0.5, 'center_y': .35}
                     halign: 'center'
             MainWindow:
-                md_bg_color: (1,1,1,1)
+                md_bg_color: app.get_color("#f8f8f8")
                 RV:
                     id: container
                     viewclass: 'TpaCard'
@@ -40,7 +41,7 @@
                         default_size_hint: 1, None
                         size_hint_y: None
                         height: self.minimum_height
-                        padding: dp(5),0,dp(5),dp(5)
+                        padding: dp(5),dp(5),dp(5),dp(5)
                         spacing: 5
 
             SecondWindow:
@@ -258,10 +259,12 @@
 <TpaCard>:
     id: card
     orientation: "vertical"
-    padding: dp(5),dp(5),dp(0),dp(5)
+    padding: dp(5),dp(5),dp(5),dp(5)
     ripple_behavior: True
     on_release: app.SelectDetailScreen(root.name,root.productsPlan,root.products,root.cyclenorm,root.averagecycle,root.weightnorm)
     spacing: dp(25)
+    radius: 20
+    style: "elevation"
     AnchorLayout:
         padding: dp(15),dp(0),dp(15),dp(0) 
         anchor_y:"top"
@@ -277,6 +280,7 @@
             adaptive_height: True
             line_height: 1.2
             markup: True
+            
 
 
 

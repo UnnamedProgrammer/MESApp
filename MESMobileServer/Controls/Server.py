@@ -29,7 +29,7 @@ class Server():
         self.serverstatus = ""
         self.worksthreads = {}
         self.client_sockets = []
-
+        self.connection_password = "16011500"
     def DataBasesInitConnections(self):
         logging.info("=======Проверка подключения к базам данных=======")
         for Base in self.ConnectionsStrings:
@@ -86,6 +86,18 @@ class Server():
         self.worksthreads['AcceptClients'] = False
 
     def ListenClient(self, client, addr):
+        client_answer = None
+        logging.info("Проверка ключа подключенного клиента")
+        data = client.recv(1024)
+        if len(data) > 0:
+            client_answer = pickle.loads(data)
+        if(client_answer == self.connection_password):
+            logging.info("Доступ разрешен")
+            pass
+        else: 
+            logging.warning("Попытка подключения к серверу из неизвестного источника")
+            logging.warning("Отключение клиента от сервера")
+            return
         self.client_sockets.append(client)
         self.worksthreads[str(addr)] = True
         Manupulator = None

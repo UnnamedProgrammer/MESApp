@@ -51,7 +51,7 @@ class MES(MDApp):
         self.dialog = None
         self.loaddialog = None
         Window.bind(on_keyboard=self.ReturnToMain)
-
+        self.buffer = b""
         #Данные в окне графика
         self.TakeProductsPlanForTpaDetail = ""
         self.TakeProductFact = ""
@@ -99,6 +99,7 @@ class MES(MDApp):
                     self.sock.setblocking(0)
                     self.connected = True
                     log.info("Подключение успешно")
+                    self.sock.send(pickle.dumps("16011500"))
                     break
             except socket.error as e:
                 log.info(
@@ -111,7 +112,7 @@ class MES(MDApp):
                 while seconds > 0:
                     if seconds == 5:
                         end = secondsendlist[2]
-                    if seconds == 4 or seconds == 3 or seconds == 2:
+                    if seconds >= 2 and seconds <=4:
                         end = secondsendlist[1]
                     if seconds == 1:
                         end = secondsendlist[0]
@@ -128,8 +129,8 @@ class MES(MDApp):
             # Получаем данные от сервера
             self.root.ids.load_spin.active = True
             self.root.ids.load_status_hint.text = 'Получение данных с сервера...'
-            while True:
-                time.sleep(0.5)
+            while self.connected:
+                time.sleep(0.1)
                 if(self.connected == False):
                     log.info("Отключение от сервера")
                     self.change_window('LoadingWindow')
@@ -151,6 +152,7 @@ class MES(MDApp):
                         if(e.strerror == "Удаленный хост принудительно разорвал существующее подключение" or
                                 e.strerror == "Connection reset by peer"):
                             self.connected = False
+                            raise socket.error
                         else:
                             continue
 
@@ -158,7 +160,7 @@ class MES(MDApp):
                         try:
                             size = struct.unpack("I", packetsize)
                             #Получаем данные исходя из их размеров
-                            if (size[0] > 4096):
+                            if (size[0] >= 4096):
                                 while True:
                                     try:
                                         log.info("Получаю данные от сервера")
@@ -175,7 +177,8 @@ class MES(MDApp):
                             lendata = len(data)
                             sizepack = struct.pack("I", lendata)
                             size = struct.unpack("I", sizepack)
-                            log.info(f"Получено: {str(size[0]/1024)}Кб данных")
+                            log.info(
+                                f"Получено: {str(round(size[0]/1024,2))}Кб данных")
                             try:
                                 DeserializeData = pickle.loads(data)
                                 log.info("Данные распакованы")
@@ -235,13 +238,12 @@ class MES(MDApp):
                                     self.sock.send(pickle.dumps(IdleQuery))
                             continue
 
+                        # Получение данных для графика за прошлую смену
                         if list(DeserializeData.keys())[0] == 'HistoryDatePoints':
                             log.info(
                                 "Данные после распаковки -> 'HistoryDatePoints'")
                             if (DeserializeData["HistoryDatePoints"] == []):
                                 self.loaddialog.dismiss()
-                                self.ShowAlert(
-                                    "Данные на выбранную дату отсутствуют.")
                             else:
                                 try:
                                     self.AddHistoryGraphFromServer(DeserializeData,
@@ -249,19 +251,23 @@ class MES(MDApp):
                                     if (self.escapebuttoncreated == False):
                                         self.AddEscapeGraphButton()
                                         self.escapebuttoncreated = True
-                                    self.loaddialog.dismiss()
+                                    self.sock.send(self.buffer)
+                                    self.buffer = b""
                                 except KeyError:
                                     self.AddHistoryGraphFromServer(DeserializeData,
                                                                    300)
-                                    self.loaddialog.dismiss()
+                                    self.sock.send(self.buffer)
+                                    self.buffer = b""
                             continue
 
+                        # При возниконвении ошибок с SQL
                         if list(DeserializeData.keys())[0] == 'SQLError':
                             log.info("Данные после распаковки -> 'SQLError'")
                             self.root.ids.load_spin.active = False
                             self.root.ids.load_status_hint.text = DeserializeData["SQLError"]
                             continue
 
+                        # Получение списка простоев, введенного веса, и распоряжений
                         if list(DeserializeData.keys())[0] == 'TpaIdleList':
                             log.info(
                                 "Данные после распаковки -> 'TpaIdleList'")
@@ -276,7 +282,10 @@ class MES(MDApp):
                 except socket.error as error:
                     self.change_window('LoadingWindow')
                     self.root.ids.load_spin.active = False
-                    self.root.ids.load_status_hint.text = error.strerror
+                    if(error.strerror == None):
+                        self.root.ids.load_status_hint.text = "Сервер выключен."
+                    else:
+                        self.root.ids.load_status_hint.text = error.strerror
                     time.sleep(3)
                     self.connection_attempt = 0
                     self.connected = False
@@ -373,8 +382,8 @@ class MES(MDApp):
             log.info("Отправлено сообщение о требовании обновления списка ТПА")
         except:
             pass
-    #Метод применения изменений списка ТПА полученного с сервера
 
+    #Метод применения изменений списка ТПА полученного с сервера
     @mainthread
     def ApplyTpaUpdate(self):
         self.root.ids.container.data = self.rvdata
@@ -395,17 +404,6 @@ class MES(MDApp):
     def NavDrawTrigger(self):
         log.info("Навбар открыт")
         self.root.ids.nav_drawer.set_state("open")
-
-    #Метод вывода DatePicker
-    def show_date_picker(self):
-        log.info("Откритие датапикера")
-        self.date_dialog.bind(on_save=self.save_date)
-        self.date_dialog.open()
-
-    # Метод сохранения даты вызванной из DatePicker
-    def save_date(self, instance, value, get_range):
-        log.info("Сохранение введенной даты")
-        self.root.ids.date_pick.text = "Дата: " + str(value)
 
     #Метод для окраски chip на экране детализации
     def changeDetailColor(self, text):
@@ -481,15 +479,20 @@ class MES(MDApp):
         data = {"NeedGraphHistoryPoint": {"StartDate": enddate,
                                           "EndDate": startdate,
                                           "ReaderOid": self.tpaReaderIds[self.root.ids.toolbar.title]}}
-        packingData = pickle.dumps(data)
-        self.sock.send(packingData)
 
         dataidles = {"NeedHistoryIdles": {"StartDate": enddate,
                                           "EndDate": startdate,
                                           "ReaderOid": self.tpaReaderIds[self.root.ids.toolbar.title]}}
-        packingData = pickle.dumps(dataidles)
-        self.sock.send(packingData)
+        try:
+            packingData = pickle.dumps(data)
+            self.sock.send(packingData)
 
+            packingData = pickle.dumps(dataidles)
+            self.buffer = packingData
+        except socket.error as e:
+            self.loaddialog.dismiss()
+            self.ShowAlert(e.strerror)
+            return
         self.enddate = startdate
         self.startdate = enddate
         self.root.ids.escape.opacity = 1
@@ -512,14 +515,11 @@ class MES(MDApp):
             radius=[20, 7, 20, 7],
             buttons=[
                 MDRaisedButton(
-                    text="Закрыть", text_color=(1, 1, 1, 1), on_release=self.dialog_close
+                    text="Закрыть", text_color=(1, 1, 1, 1), on_release=lambda x: self.dialog.dismiss()
                 )
             ]
         )
         self.dialog.open()
-
-    def dialog_close(self, instance):
-        self.dialog.dismiss()
 
     #Отоброжение процесса загрузки детализации по ТПА
     def Show_loaddialog(self):

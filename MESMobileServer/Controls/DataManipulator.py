@@ -78,8 +78,7 @@ class DataManipulator():
                     try:
                         durationsList.append(
                             ReaderDurations[reader[1]][digits][0] + ReaderDurations[reader[1]][digits+1][0])
-                        ReaderDurations[reader[1]] = sum(
-                            durationsList)/len(ReaderDurations[reader[1]])
+                        ReaderDurations[reader[1]] = sum(durationsList)/len(ReaderDurations[reader[1]])
                     except:
                         break
                 ReaderDurations[reader[1]] = durationsList

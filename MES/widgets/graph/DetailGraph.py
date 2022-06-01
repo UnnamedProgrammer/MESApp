@@ -27,6 +27,7 @@ class DetailGraph(MDBoxLayout):
     # Метод построения графика статистики по машине
     def LoadGraph(self, datepointsdict, productplan, productfact, machinename):
         self.clear_widgets()
+        self.diff = 0
         productpoints = []
         self.productfact = productfact
         count = 0
@@ -37,8 +38,7 @@ class DetailGraph(MDBoxLayout):
 
         #Фактические точки с сервера
         self.yfactpoints = productpoints
-        self.xfactpoints = [dt.datetime.strptime(
-            i, "%H:%M") for i in datepoints]
+        self.xfactpoints = [dt.datetime.strptime(i, "%H:%M") for i in datepoints]
 
         #Плановые точки
         if (datetime.now().hour >= 7 and datetime.now().hour < 19):
@@ -99,6 +99,7 @@ class DetailGraph(MDBoxLayout):
     # Метод формирования графика за прошлые смены
     def LoadGraphHistory(self, enddate, startdate, points, plan, machinename):
         self.clear_widgets()
+        self.diff = 0
         formatter = dates.DateFormatter('%H:%M')
         fig, ax = plt.subplots()
 
@@ -198,6 +199,7 @@ class DetailGraph(MDBoxLayout):
             i = i + 1
             if point == datenowd:
                 break
+        
         return str(int(math.floor(float(self.productfact) - float(self.ypoints[i]))))
 
     # Вычисление поля "До конца плана"
@@ -233,8 +235,7 @@ class DetailGraph(MDBoxLayout):
             minutes = datediff.total_seconds()/60
             totalcount = firstcount - secondcount
             countperminute = totalcount/minutes
-            planendofminutes = (
-                int(productplan)-int(productfact))/countperminute
+            planendofminutes = (int(productplan)-int(productfact))/countperminute
             time_now = datetime(1900, 1, 1, datetime.now(
             ).hour, datetime.now().minute, datetime.now().second)
             time_to_end = time_now + timedelta(minutes=planendofminutes)
